@@ -15,6 +15,7 @@ def generate_games_simple(teams):
     games.append([home,away])
   return teams_remaining, games
 
+# Generates an extra game, used if there is an uneven number of teams
 def generate_remainder_game_simple(remainder,teams):
   games = []
   home = remainder[0]
@@ -64,8 +65,6 @@ def generate_schedule_simple(teams, Ngames):
 # Probably could be improved / refactored
 def chk_schedule_simple(teams, schedule, Ngames):
 
-  print "checking schedule..."
-
   # If schedule is empty, return False
   if not schedule: return False
 
@@ -85,3 +84,9 @@ def chk_schedule_simple(teams, schedule, Ngames):
 
   # If we survived the previous for loop, it should be safe to return True
   return True
+
+# Imports a csv formatted schedule
+def import_schedule_csv(filename):
+
+  print "importing schedule from ", filename
+  print "this is still under construction..."
