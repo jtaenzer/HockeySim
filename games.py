@@ -1,10 +1,37 @@
-import random
+import random, copy
 
 # Create a dictionary to hold wins, losses, OT losses for each team
-def generate_initial_standings(teams):
+def generate_initial_standings(teams_file_path):
   standings = {}
-  for team in teams:
-    standings[team] = {"wins":0, "losses":0, "OTlosses":0, "points":0, "ROW":0}
+  teams_file = open(teams_file_path,'r')
+  for line in teams_file:
+    line_mod = line.replace('\n','')
+    standings[line_mod.split(',')[0]] = {"wins":0, "losses":0, "OTlosses":0, "points":0, "ROW":0, "div":line_mod.split(',')[1]}
+  return standings
+
+
+def generate_standings_from_game_record(teams_file_path, game_record):
+
+  standings = generate_initial_standings(teams_file_path)
+  for game in game_record:
+    winner=game_record[game]["winner"]
+    if game_record[game]["visitor"] == winner: loser=game_record[game]["home"]
+    else: loser=game_record[game]['visitor']
+    standings[winner]["wins"]+=1
+    standings[winner]["points"]+=2
+    # This bit isn't great, hard coding and probably not optimal
+    OT=game_record[game]["OT"]
+    if OT=="REG":
+      standings[winner]["ROW"]+=1
+      standings[loser]["losses"]+=1
+    elif OT=="OT":
+      standings[winner]["ROW"]+=1
+      standings[loser]["points"]+=1
+      standings[loser]["OTlosses"]+=1
+    elif OT=="SO":
+      standings[loser]["points"]+=1
+      standings[loser]["OTlosses"]+=1
+
   return standings
 
 # Decide if a game went to overtime assuming 25% of games go to OT
@@ -31,17 +58,13 @@ def weighted_coin_flip(weight1,weight2):
 # -Modify the initial weight based on each teams record
 #  Doing this in a simple way will be susceptible to fluctuations, how to avoid that? Cap the weight at some value?
 # -There should be a better way to do the entries to the standings dictionary...
-def play_games_simple(teams, schedule):
-  standings = generate_initial_standings(teams)
-  for day in schedule:
-    for game in schedule[day]:
-      winner=random.choice(game)
-      OT=overtime_check()
-      for team in game:
-        if team==winner:
-          standings[team]["wins"]+=1; standings[team]["points"]+=2
-          if OT=="REG" or OT=="OT": standings[team]["ROW"]+=1
-        else:
-          if OT=="REG": standings[team]["losses"]+=1
-          if OT=="OT" or OT=="SO": standings[team]["OTlosses"]+=1; standings[team]["points"]+=1 
-  return standings
+def play_games_simple(schedule, allowOT=True):
+  game_record = copy.deepcopy(schedule)
+  for day in game_record:
+    game = [schedule[day]['visitor'], schedule[day]['home']]
+    winner = random.choice(game)
+    game_record[day].update({'winner':winner})
+    if allowOT: OT=overtime_check()
+    else: OT="REG"
+    game_record[day].update({'OT':OT})
+  return game_record
