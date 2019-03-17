@@ -87,7 +87,7 @@ def chk_schedule_simple(teams, schedule, Ngames):
 
 # Imports a csv formatted schedule
 # Now records visitor and home for each game for tie-break purposes
-def import_schedule_csv_new(filepath):
+def import_schedule_csv(filepath):
 
   print ''
   print "importing schedule from :", filepath
