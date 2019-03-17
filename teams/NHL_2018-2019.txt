@@ -1,31 +1,31 @@
-Anaheim Ducks
-Arizona Coyotes
-Boston Bruins
-Buffalo Sabres
-Calgary Flames
-Carolina Hurricanes
-Chicago Blackhawks
-Colorado Avalanche
-Columbus Blue Jackets
-Dallas Stars
-Detroit Red Wings
-Edmonton Oilers
-Florida Panthers
-Los Angeles Kings
-Minnesota Wild
-Montreal Canadiens
-Nashville Predators
-New Jersey Devils
-New York Islanders
-New York Rangers
-Ottawa Senators
-Philadelphia Flyers
-Pittsburgh Penguins
-San Jose Sharks
-St. Louis Blues
-Tampa Bay Lightning
-Toronto Maple Leafs
-Vancouver Canucks
-Vegas Golden Knights
-Washington Capitals
-Winnipeg Jets
+Tampa Bay Lightning,a
+Boston Bruins,a
+Toronto Maple Leafs,a
+Montreal Canadiens,a
+Florida Panthers,a
+Buffalo Sabres,a
+Detroit Red Wings,a
+Ottawa Senators,a
+Washington Capitals,m
+New York Islanders,m
+Pittsburgh Penguins,m
+Carolina Hurricanes,m
+Columbus Blue Jackets,m
+Philadelphia Flyers,m
+New York Rangers,m
+New Jersey Devils,m
+Winnipeg Jets,c
+Nashville Predators,c
+St. Louis Blues,c
+Dallas Stars,c
+Minnesota Wild,c
+Chicago Blackhawks,c
+Colorado Avalanche,c
+Calgary Flames,p
+San Jose Sharks,p
+Vegas Golden Knights,p
+Arizona Coyotes,p
+Edmonton Oilers,p
+Vancouver Canucks,p
+Anaheim Ducks,p
+Los Angeles Kings,p
