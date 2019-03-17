@@ -4,13 +4,18 @@ import random
 def generate_initial_standings(teams):
   standings = {}
   for team in teams:
-    standings[team] = {"wins":0, "losses":0, "OTlosses":0, "points":0}
+    standings[team] = {"wins":0, "losses":0, "OTlosses":0, "points":0, "ROW":0}
   return standings
 
 # Decide if a game went to overtime assuming 25% of games go to OT
 def overtime_check():
-  if random.randint(0,3) < 3: return False
-  return True
+  result = random.randint(0,100)
+  # Approximate numbers stolen from an article about 3on3 OT
+  # Regulation - 75%, OT - 15%, SO - 10%
+  if result >= 90: return "SO"
+  elif result < 90 and result >= 75: return "OT"
+  else: return "REG"
+
 
 # Flip a coin
 def coin_flip():
@@ -30,15 +35,13 @@ def play_games_simple(teams, schedule):
   standings = generate_initial_standings(teams)
   for day in schedule:
     for game in schedule[day]:
-      winner=coin_flip()
+      winner=random.choice(game)
       OT=overtime_check()
-      if winner==0: 
-        standings[game[0]]["wins"]+=1; standings[game[0]]["points"]+=2
-        if OT: standings[game[1]]["OTlosses"]+=1; standings[game[1]]["points"]+=1
-        else:  standings[game[1]]["losses"]+=1        
-      elif winner==1:
-        standings[game[1]]["wins"]+=1; standings[game[1]]["points"]+=2
-        if OT: standings[game[0]]["OTlosses"]+=1; standings[game[0]]["points"]+=1
-        else:  standings[game[0]]["losses"]+=1
+      for team in game:
+        if team==winner:
+          standings[team]["wins"]+=1; standings[team]["points"]+=2
+          if OT=="REG" or OT=="OT": standings[team]["ROW"]+=1
+        else:
+          if OT=="REG": standings[team]["losses"]+=1
+          if OT=="OT" or OT=="SO": standings[team]["OTlosses"]+=1; standings[team]["points"]+=1 
   return standings
-
