@@ -88,14 +88,15 @@ def chk_schedule_simple(teams, schedule, Ngames):
 # Imports a csv formatted schedule
 def import_schedule_csv(filepath):
 
+  print ''
   print "importing schedule from :", filepath
+  print ''
 
   schedule = {}
 
   # Read schedule from file
   sched_file = open(filepath,"r")
   for line in sched_file:
-    #print line.replace("\n","").split(',')
     line_split=line.replace("\n","").split(',')
     if line_split[0]=="Date": continue
     if line_split[0] not in schedule.keys(): schedule[line_split[0]]=[]
