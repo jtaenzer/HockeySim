@@ -79,14 +79,26 @@ def chk_schedule_simple(teams, schedule, Ngames):
         if team in game: team_game_counter[team]+=1
 
   # If any team doesn't have Ngames scheduled, return False
-  for team in teams: 
+  for team in teams:
     if team_game_counter[team]!=Ngames: return False
 
   # If we survived the previous for loop, it should be safe to return True
   return True
 
 # Imports a csv formatted schedule
-def import_schedule_csv(filename):
+def import_schedule_csv(filepath):
 
-  print "importing schedule from ", filename
-  print "this is still under construction..."
+  print "importing schedule from :", filepath
+
+  schedule = {}
+
+  # Read schedule from file
+  sched_file = open(filepath,"r")
+  for line in sched_file:
+    #print line.replace("\n","").split(',')
+    line_split=line.replace("\n","").split(',')
+    if line_split[0]=="Date": continue
+    if line_split[0] not in schedule.keys(): schedule[line_split[0]]=[]
+    schedule[line_split[0]].append([line_split[1],line_split[3]])
+
+  return schedule
