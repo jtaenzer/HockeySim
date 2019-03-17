@@ -30,6 +30,7 @@ def generate_remainder_game_simple(remainder,teams):
 # 2a. Ensuring each team plays each other team the same number of times
 # 2b. Ensuring each team plays each other team the correct number of times
 # ...Probably more
+# This should only be used for debugging in its current state
 def generate_schedule_simple(teams, Ngames):
   schedule = {}
   extra = "" # extra is used to keep track of teams that have an "extra" game due to an uneven number of teams
@@ -61,8 +62,7 @@ def generate_schedule_simple(teams, Ngames):
 
   return schedule
 
-
-# Probably could be improved / refactored
+# Adapting for the new dictionary structure of the schedule
 def chk_schedule_simple(teams, schedule, Ngames):
 
   # If schedule is empty, return False
@@ -74,9 +74,9 @@ def chk_schedule_simple(teams, schedule, Ngames):
 
   # Count how many games each team plays in the current schedule
   for day in schedule:
-    for game in schedule[day]:
-      for team in teams:
-        if team in game: team_game_counter[team]+=1
+    for team in teams:
+      if team in schedule[day]['visitor'] or team in schedule[day]['home']: team_game_counter[team]+=1
+
 
   # If any team doesn't have Ngames scheduled, return False
   for team in teams:
@@ -86,20 +86,21 @@ def chk_schedule_simple(teams, schedule, Ngames):
   return True
 
 # Imports a csv formatted schedule
-def import_schedule_csv(filepath):
+# Now records visitor and home for each game for tie-break purposes
+def import_schedule_csv_new(filepath):
 
   print ''
   print "importing schedule from :", filepath
   print ''
 
   schedule = {}
-
+  game_counter=0
   # Read schedule from file
   sched_file = open(filepath,"r")
   for line in sched_file:
     line_split=line.replace("\n","").split(',')
     if line_split[0]=="Date": continue
-    if line_split[0] not in schedule.keys(): schedule[line_split[0]]=[]
-    schedule[line_split[0]].append([line_split[1],line_split[3]])
+    schedule["game"+str(game_counter)] = { "date":line_split[0], "visitor":line_split[1], "home":line_split[3]}
+    game_counter+=1
 
   return schedule
