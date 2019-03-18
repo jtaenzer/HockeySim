@@ -18,10 +18,10 @@ def swap_tuple_elements(tup, i, j):
 
 # Simple determination of which teams made the playoffs just by taking the top N teams in the standings dict
 # Cutoff establishes the number of teams to include
-# Tie-break based on ROW (assumes NHL rules)
-def determine_playoffs_simple(standings, result, cutoff=16):
+# Tie-break based on NHL rules
+def determine_playoffs_simple(game_record, standings, result, cutoff=16):
   teams_in=0
-  standings_sorted = sorted(standings.items(), key=lambda kv: (kv[1]['points'], kv[1]['ROW']), reverse=True)
+  standings_sorted = chk_tiebreaks( game_record, sort_by_points_row(standings) )
   for i in xrange(len(standings_sorted)):
     if teams_in >= cutoff: continue
     else:
@@ -119,7 +119,6 @@ def determine_playoffs_simple_NHL(game_record, standings, result, total_cutoff=1
   central_sorted   = chk_tiebreaks( game_record, sort_by_points_row(central) )
   pacific_sorted   = chk_tiebreaks( game_record, sort_by_points_row(pacific) )
 
-  # This should be improved, but is good enough while tie-breaking is only points and ROW
   for i in xrange(div_cutoff):
       result[atlantic_sorted[i][0]]+=1
       result[metro_sorted[i][0]]+=1
