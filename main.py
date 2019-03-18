@@ -5,6 +5,7 @@ import operator
 import schedule as sched
 import games as games
 import sorting as sort
+from visualize import visualize
 
 # Print sorted standings, for debugging
 def print_standings_sorted(standings):
@@ -33,15 +34,17 @@ def prep_sim_result(teams):
 ##############################
 
 # Read teams from file
-file_path = "/home/joe/Desktop/fun/HockeySim/teams/NHL_2018-2019.mod"
+file_path = "/home/joe/Desktop/fun/HockeySim/teams/NHL_2018-2019.txt"
 teams_file = open(file_path,"r")
 teams = []
 for line in teams_file: teams.append(line.split(',')[0])
 
-sims = 1
-iterations = 100
+sims = 25
+iterations = 1000
 Ngames = 82
 cutoff = 16
+rootfile="test.root"
+treename="tree"
 
 # Prepare a (random) schedule for the season
 #schedule = sched.generate_schedule_simple(teams, Ngames)
@@ -52,6 +55,10 @@ schedule = sched.import_schedule_csv("/home/joe/Desktop/fun/HockeySim/schedules/
 if not sched.chk_schedule_simple(teams,schedule,Ngames): print "Imported schedule failed sanity check."
 
 else:
+
+  plotter = visualize(rootfile,treename, teams)
+  plotter.set_weight(100/iterations)
+
 # Run iterations of the same season
   for sim in xrange(sims):
     print "Running sim #", sim
@@ -60,11 +67,15 @@ else:
     result=prep_sim_result(teams)
 
     for i in xrange(iterations):
-      #if i%1000==0: print "Running iteration :", i
       game_record = games.play_games_simple(schedule)
       standings = games.generate_standings_from_game_record(file_path,game_record)
       sort.determine_playoffs_simple_NHL(game_record, standings, result, cutoff)
-#      chk_points(standings, result)
+      #sort.determine_playoffs_simple(game_record, standings, result, cutoff)
 
     # Only print the sim results if we ran multiple iterations
-    if iterations>1: print_sim_result(result, "Playoff %")
+    if iterations>1: 
+      print_sim_result(result, "Playoff %")
+      plotter.fill_TTree(sim, result)
+
+plotter.write_TFile()
+#plotter.draw_TGraphs()
