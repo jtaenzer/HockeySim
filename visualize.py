@@ -54,11 +54,13 @@ class visualize:
         leaf=self.ttree.GetLeaf(key.replace(" ","_"))
         graphdict[key].SetPoint(i,i,leaf.GetValue()*self.weight)
 
+    total=0
+    for i in xrange(len(allpoints)): total+=allpoints[i]
+
     can=r.TCanvas()
     same_str=""
     colors={}
     for key in graphdict:
-      print "Drawing",key
       graphdict[key].SetMinimum(0.45)
       graphdict[key].SetMaximum(0.6)
       colors[key]=self.select_colour()
@@ -66,6 +68,7 @@ class visualize:
       graphdict[key].Draw(same_str)
       same_str="SAME"
 
+    # myLineBoxText is from AtlasStyle -- this reliance on AtlasStyle should be removed, although its handy for now
     counter=0
     for key in graphdict:
       y=0.85-0.04*float(counter)
@@ -73,7 +76,6 @@ class visualize:
       counter+=1
 
     can.SaveAs(filename)
-#        print key, leaf.GetValue()
 
   def select_colour(self):
     colors = [r.kBlack,r.kRed-4, r.kRed, r.kGreen + 3, r.kGreen - 3, r.kAzure -2, r.kAzure +2, r.kMagenta -2, r.kMagenta+2]
