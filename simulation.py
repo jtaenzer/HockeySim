@@ -13,6 +13,10 @@ class simulation:
 
         if self.league == "NHL":
             self.Ngames = 82
+        else:
+            print("%s is not supported as a league" % self.league)
+            print("Using default settings with league=\"NHL\", this may break the schedule maker")
+            self.Ngames = 82
 
         self.teams = []
         self.read_teams_file(teams_file_path)
@@ -37,6 +41,10 @@ class simulation:
             self.result[team] = 0
 
     def run_simulation(self):
+        if not self.schedule:
+            print("Schedule dictionary is empty, can't sim.")
+            return
+
         self.prep_sim_result()
         print("Running simulation with %i iterations" % self.iterations)
         for i in xrange(self.iterations):
