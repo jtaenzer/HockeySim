@@ -9,7 +9,7 @@ from visualize import visualize
 
 
 sims          = 1
-iterations    = 5000
+iterations    = 1000
 teams_file    = "/home/joe/Desktop/fun/HockeySim/teams/NHL_2018-2019.txt"
 schedule_file = "/home/joe/Desktop/fun/HockeySim/schedules/NHL_2018-2019.csv"
 season_start  = "auto"

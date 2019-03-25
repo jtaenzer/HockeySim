@@ -1,13 +1,15 @@
-import random, copy, datetime
-from team_info import team_info
+import random
+import copy
+import datetime
+
 
 class schedule_maker:
 
     def __init__(self, league, teams, ngames, infile="", fileformat="csv"):
-        self.league     = league
-        self.teams      = teams
-        self.Ngames     = ngames
-        self.infile     = infile
+        self.league = league
+        self.teams = teams
+        self.Ngames = ngames
+        self.infile = infile
         self.fileformat = fileformat
 
         self.schedule = dict()
@@ -46,15 +48,14 @@ class schedule_maker:
                                          "OT": line_split[5]}
 
             if build_schedule[sched_key]["visitor_goals"] and build_schedule[sched_key]["home_goals"]:
-                v_goals = int(build_schedule[sched_key]["visitor_goals"])
-                h_goals = int(build_schedule[sched_key]["home_goals"])
-                winner = build_schedule[sched_key]["visitor"] if v_goals > h_goals else build_schedule[sched_key]["home"]
+                visitor = build_schedule[sched_key]["visitor"]
+                visitor_goals = int(build_schedule[sched_key]["visitor_goals"])
+                home = build_schedule[sched_key]["home"]
+                home_goals = int(build_schedule[sched_key]["home_goals"])
+                winner = visitor if visitor_goals > home_goals else home
             else:
                 winner = ""
             build_schedule[sched_key].update({"winner": winner})
-
-
-
             game_counter += 1
 
         if not self.chk_schedule_simple(build_schedule):

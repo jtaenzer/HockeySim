@@ -3,6 +3,7 @@ import ROOT as r
 from array import array
 import AtlasStyle as AS
 
+
 class visualize:
 
   def __init__(self, filename, treename, tbranches, option="RECREATE"):

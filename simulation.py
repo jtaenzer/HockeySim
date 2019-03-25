@@ -11,11 +11,11 @@ class simulation:
     def __init__(self, iterations, league, teams_file_path, schedule_file_path, season_start="auto"):
 
         # Number of times to play the season
-        self.iterations    = iterations
+        self.iterations = iterations
 
         # For now the only supported league is "NHL" and it is only used to set Ngames
         # Could be used for more in the future
-        self.league        = league
+        self.league = league
         if self.league == "NHL":
             self.Ngames = 82
         else:
@@ -25,7 +25,7 @@ class simulation:
 
         # Set up the list of team_info class objects based on the text file provided
         # No protection against bad input yet...
-        self.teams_path    = teams_file_path
+        self.teams_path = teams_file_path
         self.teams = self.read_teams_file(teams_file_path)
 
         # Set up the schedule based on the text file provided
@@ -48,8 +48,8 @@ class simulation:
                     self.season_start = int(season_start)
                     self.season_start_date = schedmaker.find_game_date_by_number(self.schedule, self.season_start)
                 except ValueError:
-                    print("Couldn't convert season_start (%s) to a YYYY-MM-DD date or to an integer, defaulting to auto" %
-                          self.season_start)
+                    print("Couldn't convert season_start (%s) to a YYYY-MM-DD date or to an integer, defaulting to "
+                          "auto" % self.season_start)
                     self.season_start = "auto"
 
             if type(self.season_start) is int and first_unplayed_game < self.season_start:
@@ -61,7 +61,6 @@ class simulation:
             self.season_start_date = schedmaker.find_game_date_by_number(self.schedule, self.season_start)
 
         self.result = dict()
-
 
     # Create an empty dictionary to hold the simulated result
     # For now the result is just the count of how many times each team makes the playoffs
@@ -84,10 +83,11 @@ class simulation:
         self.prep_sim_result()
         print("Running simulation with %i iterations" % self.iterations)
         for i in xrange(self.iterations):
-            if i%50==0: print "running sim", i
+            if i % 1000 == 0:
+                print "running sim", i
             season = play_season(self.teams, self.schedule, self.season_start)
             season.play_games_simple()
-            season.determine_playoffs_NHL(self.result)
+            season.determine_playoffs_nhl(self.result)
 
         print("Done, printing result")
         self.print_sim_result("Playoff %")

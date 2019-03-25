@@ -1,13 +1,15 @@
-import random, copy
+import random
+import copy
+
 
 class play_season:
 
     def __init__(self, teams, schedule, start):
-        self.teams           = teams
-        self.schedule        = schedule
-        self.game_record     = copy.deepcopy(self.schedule)
-        self.standings       = self.generate_initial_standings_NHL(self.teams)
-        self.start           = start
+        self.teams = teams
+        self.schedule = schedule
+        self.game_record = copy.deepcopy(self.schedule)
+        self.standings = self.generate_initial_standings_nhl(self.teams)
+        self.start = start
 
     # Run through the schedule and decide each game with a coin flip
     # Ideas/thoughts:
@@ -15,50 +17,36 @@ class play_season:
     # -Modify the initial weight based on each teams record
     #  Doing this in a simple way will be susceptible to fluctuations, how to avoid that? Cap the weight at some value?
     # -There should be a better way to do the entries to the standings dictionary...
-    def play_games_simple(self, allowOT=True):
+    def play_games_simple(self, allow_ot=True):
         for i in xrange(len(self.game_record)):
             if i < self.start:
                 continue
             sched_key = "game"+str(i)
             game = [self.schedule[sched_key]["visitor"], self.schedule[sched_key]["home"]]
             winner = random.choice(game)
-            OT = self.overtime_check() if allowOT else ""
+            ot = self.overtime_check() if allow_ot else ""
             self.game_record[sched_key].update({"winner": winner})
-            self.game_record[sched_key].update({'OT': OT})
+            self.game_record[sched_key].update({'OT': ot})
 
         self.standings = self.generate_standings_from_game_record(self.teams, self.game_record)
-
-    # Decide if a game went to overtime assuming 25% of games go to OT
-    def overtime_check(self):
-        result = random.randint(0, 100)
-        # Approximate numbers stolen from an article about 3on3 OT
-        # Regulation - 75%, OT - 15%, SO - 10%
-        if result >= 90:
-            return "SO"
-        elif result < 90 and result >= 75:
-            return "OT"
-        else:
-            return ""
 
     # Determine which teams made the playoffs based on the NHL wildcard format
     # Tie-breaking based on ROW is implemented
     # Tie-breaking based on head-to-head games and goals scored not implemented. Not clear how to do this yet.
-    def determine_playoffs_NHL(self, result):
+    def determine_playoffs_nhl(self, result):
 
         # Should these by hard coded??
-        Nteams = 16  # number of teams that can make the playoffs
         div_cutoff = 3  # top 3 teams from each division automatically make the playoffs
         wildcard_cutoff = 2  # The top 2 teams from each conference that didn't get a div spot take the wildcard spots
 
-        atlantic, metro, central, pacific = self.sort_standings_by_division_NHL(self.standings)
+        atlantic, metro, central, pacific = self.sort_standings_by_division_nhl(self.standings)
         east = self.merge_dicts(atlantic, metro)
         west = self.merge_dicts(central, pacific)
 
-        #standings_sorted = chk_tiebreaks(self.game_record, sort_by_points_row(self.standings))
-        atlantic_sorted = self.chk_tiebreaks_NHL(self.sort_by_points_row(atlantic))
-        metro_sorted = self.chk_tiebreaks_NHL(self.sort_by_points_row(metro))
-        central_sorted = self.chk_tiebreaks_NHL(self.sort_by_points_row(central))
-        pacific_sorted = self.chk_tiebreaks_NHL(self.sort_by_points_row(pacific))
+        atlantic_sorted = self.chk_tiebreaks_nhl(self.sort_by_points_row(atlantic))
+        metro_sorted = self.chk_tiebreaks_nhl(self.sort_by_points_row(metro))
+        central_sorted = self.chk_tiebreaks_nhl(self.sort_by_points_row(central))
+        pacific_sorted = self.chk_tiebreaks_nhl(self.sort_by_points_row(pacific))
 
         for i in xrange(div_cutoff):
             result[atlantic_sorted[i][0]] += 1
@@ -70,8 +58,8 @@ class play_season:
             west.pop(central_sorted[i][0])
             west.pop(pacific_sorted[i][0])
 
-        east_sorted = self.chk_tiebreaks_NHL(self.sort_by_points_row(east))
-        west_sorted = self.chk_tiebreaks_NHL(self.sort_by_points_row(west))
+        east_sorted = self.chk_tiebreaks_nhl(self.sort_by_points_row(east))
+        west_sorted = self.chk_tiebreaks_nhl(self.sort_by_points_row(west))
 
         for i in xrange(wildcard_cutoff):
             result[east_sorted[i][0]] += 1
@@ -79,7 +67,7 @@ class play_season:
 
     # This method checks for ties and re-orders the standings based on tie-breakers
     # For now only the head-to-head record is checked
-    def chk_tiebreaks_NHL(self, standings_sorted):
+    def chk_tiebreaks_nhl(self, standings_sorted):
         checkedpairs = []
         for i in xrange(len(standings_sorted)):
             for j in xrange(len(standings_sorted)):
@@ -87,9 +75,14 @@ class play_season:
                     continue
                 if [i, j] in checkedpairs or [j, i] in checkedpairs:
                     continue
-                if standings_sorted[i][1]["points"] == standings_sorted[j][1]["points"] and standings_sorted[i][1][
-                   "ROW"] == standings_sorted[j][1]["ROW"]:
-                    if self.chk_head_to_head_NHL(standings_sorted[i][0], standings_sorted[j][0]) == standings_sorted[j][0]:
+                points_i = standings_sorted[i][1]["points"]
+                points_j = standings_sorted[j][1]["points"]
+                row_i = standings_sorted[i][1]["ROW"]
+                row_j = standings_sorted[j][1]["ROW"]
+                if points_i == points_j and row_i == row_j:
+                    team_i = standings_sorted[i][0]
+                    team_j = standings_sorted[j][0]
+                    if self.chk_head_to_head_nhl(team_i, team_j) == team_j:
                         standings_sorted = self.swap_tuple_elements(standings_sorted, i, j)
                 checkedpairs.append([i, j])
         return standings_sorted
@@ -101,7 +94,7 @@ class play_season:
     # the extra game shall not be included.
     # The last fallback if the teams are still tied is the team with the greater goal differential -- not clear what
     # to do there, just return random for now
-    def chk_head_to_head_NHL(self, team1, team2):
+    def chk_head_to_head_nhl(self, team1, team2):
 
         # First for convenience find the head-to-head games in our self.game_record and put them in a smaller dictionary
         head_to_head = dict()
@@ -116,7 +109,8 @@ class play_season:
         if len(head_to_head) % 2 != 0:
             count = {team1: 0, team2: 0}
             head_to_head_sorted = sorted(head_to_head.items(), key=lambda kv: kv[1]['date'])
-            for i in xrange(len(head_to_head_sorted)): count[head_to_head_sorted[i][1]["home"]] += 1
+            for i in xrange(len(head_to_head_sorted)):
+                count[head_to_head_sorted[i][1]["home"]] += 1
             if count[team1] > count[team2]:
                 pop_team = team1
             else:
@@ -146,13 +140,13 @@ class play_season:
             return random.choice([team1, team2])  # If they're still tied, just return a random choice
 
     # Sort the standings by NHL divisions
-    # Used in determine_playoffs_simple_NHL()
+    # Used in determine_playoffs_simple_nhl()
     @staticmethod
-    def sort_standings_by_division_NHL(standings):
+    def sort_standings_by_division_nhl(standings):
         atlantic = dict()
-        metro    = dict()
-        central  = dict()
-        pacific  = dict()
+        metro = dict()
+        central = dict()
+        pacific = dict()
 
         for team in standings:
             if standings[team]['div'] == 'a':
@@ -169,7 +163,7 @@ class play_season:
     # Prints the standings in a nicely formatted way
     # Currently gets called to print initial standings when starting a sim mid-season
     @staticmethod
-    def print_standings_sorted(standings, format = "league"):
+    def print_standings_sorted(standings, output_format="league"):
 
         print '{:<25}'.format('Team'), \
               '{:<10}'.format('Wins'), \
@@ -178,12 +172,12 @@ class play_season:
               '{:<10}'.format('Points'), \
               '{:<10}'.format('ROW')
 
-        if format == "league":
+        if output_format == "league":
             standings_sorted = play_season.sort_by_points_row(standings)
             play_season.print_standings_tuple(standings_sorted)
 
-        elif format == "conference":
-            atlantic, metro, central, pacific = play_season.sort_standings_by_division_NHL(standings)
+        elif output_format == "conference":
+            atlantic, metro, central, pacific = play_season.sort_standings_by_division_nhl(standings)
             east = play_season.merge_dicts(atlantic, metro)
             west = play_season.merge_dicts(central, pacific)
             print("\nEAST\n")
@@ -191,8 +185,8 @@ class play_season:
             print("\nWEST\n")
             play_season.print_standings_tuple(play_season.sort_by_points_row(west))
 
-        elif format == "division":
-            atlantic, metro, central, pacific = self.sort_standings_by_division_NHL(standings)
+        elif output_format == "division":
+            atlantic, metro, central, pacific = play_season.sort_standings_by_division_nhl(standings)
             print("\nATLANTIC\n")
             play_season.print_standings_tuple(play_season.sort_by_points_row(atlantic))
             print("\nMETROPOLITAN\n")
@@ -202,13 +196,13 @@ class play_season:
             print("\nPACIFIC\n")
             play_season.print_standings_tuple(play_season.sort_by_points_row(pacific))
 
-        elif format == "wildcard":
+        elif output_format == "wildcard":
 
             # These are also hard-coded elsew here... so maybe they shouldn't be!
-            div_cutoff=3
-            wc_cutoff=2
+            div_cutoff = 3
+            wc_cutoff = 2
 
-            atlantic, metro, central, pacific = play_season.sort_standings_by_division_NHL(standings)
+            atlantic, metro, central, pacific = play_season.sort_standings_by_division_nhl(standings)
             east = play_season.merge_dicts(atlantic, metro)
             west = play_season.merge_dicts(central, pacific)
 
@@ -271,9 +265,20 @@ class play_season:
             play_season.print_standings_tuple(play_season.sort_by_points_row(west_wc))
             print("------------------------------------------------------------------------")
             play_season.print_standings_tuple(play_season.sort_by_points_row(west))
-
-
         print("\n")
+
+    # Decide if a game went to overtime assuming 25% of games go to OT
+    @staticmethod
+    def overtime_check():
+        result = random.randint(0, 100)
+        # Approximate numbers stolen from an article about 3on3 OT
+        # Regulation - 75%, OT - 15%, SO - 10%
+        if result >= 90:
+            return "SO"
+        elif 75 <= result < 90:
+            return "OT"
+        else:
+            return ""
 
     @staticmethod
     def print_standings_tuple(standings_tup):
@@ -287,16 +292,15 @@ class play_season:
 
     @staticmethod
     # Create a dictionary to hold wins, losses, OT losses for each team
-    def generate_initial_standings_NHL(teams):
+    def generate_initial_standings_nhl(teams):
         standings = {}
         for team in teams:
-            standings[team.name] = {"wins": 0, "losses": 0, "OTlosses": 0, "points": 0, "ROW": 0,
-                                                 "div": team.division }
+            standings[team.name] = {"wins": 0, "losses": 0, "OTlosses": 0, "points": 0, "ROW": 0, "div": team.division}
         return standings
 
     @staticmethod
     def generate_standings_from_game_record(teams, game_record, end=None):
-        standings = play_season.generate_initial_standings_NHL(teams)
+        standings = play_season.generate_initial_standings_nhl(teams)
 
         for i in xrange(len(game_record)):
             game_key = "game"+str(i)
@@ -312,15 +316,15 @@ class play_season:
             standings[winner]["wins"] += 1
             standings[winner]["points"] += 2
             # This bit isn't great, hard coding and probably not optimal
-            OT = game_record[game_key]["OT"]
-            if not OT:
+            ot = game_record[game_key]["OT"]
+            if not ot:
                 standings[winner]["ROW"] += 1
                 standings[loser]["losses"] += 1
-            elif OT == "OT":
+            elif ot == "OT":
                 standings[winner]["ROW"] += 1
                 standings[loser]["points"] += 1
                 standings[loser]["OTlosses"] += 1
-            elif OT == "SO":
+            elif ot == "SO":
                 standings[loser]["points"] += 1
                 standings[loser]["OTlosses"] += 1
         return standings
