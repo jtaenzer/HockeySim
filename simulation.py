@@ -2,6 +2,8 @@ from __future__ import division
 
 from schedule_maker import schedule_maker
 from play_season import play_season
+from team_info import team_info
+
 
 class simulation:
 
@@ -12,6 +14,10 @@ class simulation:
         self.schedule_path = schedule_file_path
 
         if self.league == "NHL":
+            self.Ngames = 82
+        else:
+            print("%s is not supported as a league" % self.league)
+            print("Using default settings with league=\"NHL\", this may break the schedule maker")
             self.Ngames = 82
 
         self.teams = []
@@ -25,7 +31,10 @@ class simulation:
     def read_teams_file(self, path):
         teams_file = open(path, 'r')
         for line in teams_file:
-            self.teams.append(line.split(',')[0])
+            name = line.split(',')[0]
+            div = line.split(',')[1].replace('\n', '')
+            team = team_info(name, div)
+            self.teams.append(team)
 
     # Create an empty dictionary to hold the simulated result
     # For now the result is just the count of how many times each team makes the playoffs
@@ -34,13 +43,17 @@ class simulation:
     # -
     def prep_sim_result(self):
         for team in self.teams:
-            self.result[team] = 0
+            self.result[team.name] = 0
 
     def run_simulation(self):
+        if not self.schedule:
+            print("Schedule dictionary is empty, can't sim.")
+            return
+
         self.prep_sim_result()
         print("Running simulation with %i iterations" % self.iterations)
         for i in xrange(self.iterations):
-            season = play_season(self.teams_path, self.schedule)
+            season = play_season(self.teams, self.schedule)
             season.play_games_simple()
             season.determine_playoffs_NHL(self.result)
 

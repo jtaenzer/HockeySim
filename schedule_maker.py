@@ -1,4 +1,5 @@
 import random, copy
+from team_info import team_info
 
 class schedule_maker:
 
@@ -82,7 +83,7 @@ class schedule_maker:
                 teams_remaining.remove(home)
                 away = random.choice(teams_remaining)
                 teams_remaining.remove(away)
-                build_schedule[key] = {"date": "day"+str(daycounter), "visitor": away, "home": home}
+                build_schedule[key] = {"date": "day"+str(daycounter), "visitor": away.name, "home": home.name}
                 gamecounter += 1
 
         # If len(teams) is odd, we will have a "remainder" team that didn't get a game scheduled in the above while loop
@@ -98,7 +99,7 @@ class schedule_maker:
                 teams_remaining.remove(home)
                 away = random.choice(teams_remaining)
                 teams_remaining.remove(away)
-                build_schedule[key] = {"date": "day"+str(daycounter), "visitor": away, "home": home}
+                build_schedule[key] = {"date": "day"+str(daycounter), "visitor": away.name, "home": home.name}
                 gamecounter += 1
 
         return build_schedule
@@ -113,17 +114,17 @@ class schedule_maker:
         # Regenerating this dictionary every time isn't efficiency -- rethink
         team_game_counter = dict()
         for team in self.teams:
-            team_game_counter[team] = 0
+            team_game_counter[team.name] = 0
 
         # Count how many games each team plays in the current schedule
         for game in build_schedule:
             for team in self.teams:
-                if team in build_schedule[game]['visitor'] or team in build_schedule[game]['home']:
-                    team_game_counter[team] += 1
+                if team.name in build_schedule[game]['visitor'] or team.name in build_schedule[game]['home']:
+                    team_game_counter[team.name] += 1
 
         # If any team doesn't have Ngames scheduled, return False
         for team in self.teams:
-            if team_game_counter[team] != self.Ngames:
+            if team_game_counter[team.name] != self.Ngames:
                 return False
 
             # If we survived the previous for loop, it should be safe to return True
