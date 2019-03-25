@@ -7,7 +7,7 @@ from visualize import visualize
 
 # Read teams from file
 teams_file = "/home/joe/Desktop/fun/HockeySim/teams/NHL_2018-2019.txt"
-schedule_file="/home/joe/Desktop/fun/HockeySim/schedules/NHL_2018-2019.csv"
+schedule_file = "/home/joe/Desktop/fun/HockeySim/schedules/NHL_2018-2019.csv"
 
 sims       = 2
 iterations = 1000
