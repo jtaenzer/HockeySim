@@ -1,4 +1,4 @@
-import random, copy
+import random, copy, datetime
 from team_info import team_info
 
 class schedule_maker:
@@ -143,3 +143,33 @@ class schedule_maker:
 
             # If we survived the previous for loop, it should be safe to return True
         return True
+
+    @staticmethod
+    def find_first_unplayed_game(schedule):
+        for i in xrange(len(schedule)):
+            game = "game"+str(i)
+            if not schedule[game]["visitor_goals"] and not schedule[game]["home_goals"]:
+                return i
+        # This is not ideal, but we need to return something even if every game has been played
+        # returning 0 should force the entire season to be played
+        return 0
+
+    @staticmethod
+    def find_game_number_by_date(schedule, date):
+
+        if type(date) is not datetime.datetime:
+            print("find_game_number_by_date was passsed a non datetime.datetime object, returning 0")
+            return 0
+
+        for i in xrange(len(schedule)):
+            game = "game"+str(i)
+            game_date = datetime.datetime.strptime(schedule[game]["date"], '%Y-%m-%d')
+            if game_date > date:
+                return i
+        # Not ideal to return 0 here, should improve with downstream error handling
+        return 0
+
+    @staticmethod
+    def find_game_date_by_number(schedule, number):
+        game = "game" + str(number)
+        return datetime.datetime.strptime(schedule[game]["date"], '%Y-%m-%d')
