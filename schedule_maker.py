@@ -39,8 +39,22 @@ class schedule_maker:
             line_split = line.replace("\n", "").split(',')
             if line_split[0] == "Date":
                 continue
-            build_schedule["game"+str(game_counter)] = {"date": line_split[0], "visitor": line_split[1],
-                                                        "home": line_split[3]}
+            sched_key = "game" + str(game_counter)
+            build_schedule[sched_key] = {"date": line_split[0],
+                                         "visitor": line_split[1], "visitor_goals": line_split[2],
+                                         "home": line_split[3], "home_goals": line_split[4],
+                                         "OT": line_split[5]}
+
+            if build_schedule[sched_key]["visitor_goals"] and build_schedule[sched_key]["home_goals"]:
+                v_goals = int(build_schedule[sched_key]["visitor_goals"])
+                h_goals = int(build_schedule[sched_key]["home_goals"])
+                winner = build_schedule[sched_key]["visitor"] if v_goals > h_goals else build_schedule[sched_key]["home"]
+            else:
+                winner = ""
+            build_schedule[sched_key].update({"winner": winner})
+
+
+
             game_counter += 1
 
         if not self.chk_schedule_simple(build_schedule):
@@ -119,7 +133,7 @@ class schedule_maker:
         # Count how many games each team plays in the current schedule
         for game in build_schedule:
             for team in self.teams:
-                if team.name in build_schedule[game]['visitor'] or team.name in build_schedule[game]['home']:
+                if team.name in build_schedule[game]["visitor"] or team.name in build_schedule[game]["home"]:
                     team_game_counter[team.name] += 1
 
         # If any team doesn't have Ngames scheduled, return False
