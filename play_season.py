@@ -1,5 +1,4 @@
 import random, copy
-from team_info import team_info
 
 class play_season:
 
@@ -8,12 +7,7 @@ class play_season:
         self.schedule        = schedule
         self.game_record     = copy.deepcopy(self.schedule)
         self.standings       = self.generate_initial_standings_NHL(self.teams)
-
-        # Warning that there is no real protection against "bad" start values at present...
-        if start == "auto":
-            self.start = self.find_first_unplayed_game()
-        else:
-            self.start = int(start)
+        self.start           = start
 
     # Run through the schedule and decide each game with a coin flip
     # Ideas/thoughts:
@@ -22,27 +16,17 @@ class play_season:
     #  Doing this in a simple way will be susceptible to fluctuations, how to avoid that? Cap the weight at some value?
     # -There should be a better way to do the entries to the standings dictionary...
     def play_games_simple(self, allowOT=True):
-        #for day in self.game_record:
         for i in xrange(len(self.game_record)):
-            sched_key = "game"+str(i)
             if i < self.start:
                 continue
-            else:
-                game = [self.schedule[sched_key]["visitor"], self.schedule[sched_key]["home"]]
-                winner = random.choice(game)
-                OT = self.overtime_check() if allowOT else ""
-                self.game_record[sched_key].update({"winner": winner})
-                self.game_record[sched_key].update({'OT': OT})
+            sched_key = "game"+str(i)
+            game = [self.schedule[sched_key]["visitor"], self.schedule[sched_key]["home"]]
+            winner = random.choice(game)
+            OT = self.overtime_check() if allowOT else ""
+            self.game_record[sched_key].update({"winner": winner})
+            self.game_record[sched_key].update({'OT': OT})
 
         self.standings = self.generate_standings_from_game_record(self.teams, self.game_record)
-
-    def find_first_unplayed_game(self):
-        for i in xrange(len(self.schedule)):
-            game="game"+str(i)
-            if not self.schedule[game]["visitor_goals"] and not self.schedule[game]["home_goals"]:
-                return i
-        else:
-            return 0
 
     # Decide if a game went to overtime assuming 25% of games go to OT
     def overtime_check(self):
@@ -311,20 +295,24 @@ class play_season:
         return standings
 
     @staticmethod
-    def generate_standings_from_game_record(teams, game_record):
+    def generate_standings_from_game_record(teams, game_record, end=None):
         standings = play_season.generate_initial_standings_NHL(teams)
-        for game in game_record:
-            if not game_record[game]["winner"]:
+
+        for i in xrange(len(game_record)):
+            game_key = "game"+str(i)
+            if end is not None and i >= end:
                 continue
-            winner = game_record[game]["winner"]
-            if game_record[game]["visitor"] == winner:
-                loser = game_record[game]["home"]
+            elif not game_record[game_key]["winner"]:
+                continue
+            winner = game_record[game_key]["winner"]
+            if game_record[game_key]["visitor"] == winner:
+                loser = game_record[game_key]["home"]
             else:
-                loser = game_record[game]["visitor"]
+                loser = game_record[game_key]["visitor"]
             standings[winner]["wins"] += 1
             standings[winner]["points"] += 2
             # This bit isn't great, hard coding and probably not optimal
-            OT = game_record[game]["OT"]
+            OT = game_record[game_key]["OT"]
             if not OT:
                 standings[winner]["ROW"] += 1
                 standings[loser]["losses"] += 1
