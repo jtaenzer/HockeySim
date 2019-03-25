@@ -1,4 +1,5 @@
 from __future__ import division
+import datetime
 
 from schedule_maker import schedule_maker
 from play_season import play_season
@@ -7,22 +8,14 @@ from team_info import team_info
 
 class simulation:
 
-    def __init__(self, iterations, league, teams_file_path, schedule_file_path, season_start = "auto"):
+    def __init__(self, iterations, league, teams_file_path, schedule_file_path, season_start="auto"):
+
+        # Number of times to play the season
         self.iterations    = iterations
+
+        # For now the only supported league is "NHL" and it is only used to set Ngames
+        # Could be used for more in the future
         self.league        = league
-        self.teams_path    = teams_file_path
-        self.schedule_path = schedule_file_path
-        self.season_start = season_start
-
-        # Protection against bad season_start input
-        if self.season_start != "auto":
-            try:
-                int(self.season_start)
-            except:
-                print("Couldn't convert season_start (%s) to an integer game value, defaulting to auto" %
-                      self.season_start)
-                self.season_start = "auto"
-
         if self.league == "NHL":
             self.Ngames = 82
         else:
@@ -30,21 +23,45 @@ class simulation:
             print("Using default settings with league=\"NHL\", this may break the schedule maker")
             self.Ngames = 82
 
-        self.teams = []
-        self.read_teams_file(teams_file_path)
+        # Set up the list of team_info class objects based on the text file provided
+        # No protection against bad input yet...
+        self.teams_path    = teams_file_path
+        self.teams = self.read_teams_file(teams_file_path)
 
+        # Set up the schedule based on the text file provided
+        # No protection against bad input yet...
+        self.schedule_path = schedule_file_path
         schedmaker = schedule_maker(self.league, self.teams, self.Ngames, self.schedule_path)
         self.schedule = schedmaker.schedule
 
+        # Protection against bad season_start input
+        # Really not sure this belongs in this class, but its convenient for now
+        first_unplayed_game = schedmaker.find_first_unplayed_game(self.schedule)
+        if season_start != "auto":
+            # Check if season_start can be converted to a datetime
+            try:
+                self.season_start_date = datetime.datetime.strptime(season_start, '%Y-%m-%d')
+                self.season_start = schedmaker.find_game_number_by_date(self.schedule, self.season_start_date)
+            except (TypeError, ValueError) as e:
+                # If it isn't a date, it might be an integer
+                try:
+                    self.season_start = int(season_start)
+                    self.season_start_date = schedmaker.find_game_date_by_number(self.schedule, self.season_start)
+                except ValueError:
+                    print("Couldn't convert season_start (%s) to a YYYY-MM-DD date or to an integer, defaulting to auto" %
+                          self.season_start)
+                    self.season_start = "auto"
+
+            if type(self.season_start) is int and first_unplayed_game < self.season_start:
+                print("The first unplayed game is before season_start, defaulting back to auto")
+                self.season_start = first_unplayed_game
+                self.season_start_date = schedmaker.find_game_date_by_number(self.schedule, self.season_start)
+        else:
+            self.season_start = first_unplayed_game
+            self.season_start_date = schedmaker.find_game_date_by_number(self.schedule, self.season_start)
+
         self.result = dict()
 
-    def read_teams_file(self, path):
-        teams_file = open(path, 'r')
-        for line in teams_file:
-            name = line.split(',')[0]
-            div = line.split(',')[1].replace('\n', '')
-            team = team_info(name, div)
-            self.teams.append(team)
 
     # Create an empty dictionary to hold the simulated result
     # For now the result is just the count of how many times each team makes the playoffs
@@ -60,14 +77,14 @@ class simulation:
             print("Schedule dictionary is empty, can't sim.")
             return
 
-        if self.season_start == "auto" or int(self.season_start) > 0:
-            print("Generating initial standings...\n")
-            standings = play_season.generate_standings_from_game_record(self.teams, self.schedule)
-            play_season.print_standings_sorted(standings, "wildcard")
+        print("Generating initial standings from date %s\n" % self.season_start_date.date())
+        standings = play_season.generate_standings_from_game_record(self.teams, self.schedule, self.season_start)
+        play_season.print_standings_sorted(standings, "wildcard")
 
         self.prep_sim_result()
         print("Running simulation with %i iterations" % self.iterations)
         for i in xrange(self.iterations):
+            if i%50==0: print "running sim", i
             season = play_season(self.teams, self.schedule, self.season_start)
             season.play_games_simple()
             season.determine_playoffs_NHL(self.result)
@@ -83,3 +100,14 @@ class simulation:
             mult_quantity = mult * self.result[team] / self.iterations
             print("%s %.2f" % ('{:<25}'.format(team), mult_quantity))
         print("")
+
+    @staticmethod
+    def read_teams_file(path):
+        teams = []
+        teams_file = open(path, 'r')
+        for line in teams_file:
+            name = line.split(',')[0]
+            div = line.split(',')[1].replace('\n', '')
+            team = team_info(name, div)
+            teams.append(team)
+        return teams
