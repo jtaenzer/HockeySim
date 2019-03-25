@@ -7,11 +7,21 @@ from team_info import team_info
 
 class simulation:
 
-    def __init__(self, iterations, league, teams_file_path, schedule_file_path):
+    def __init__(self, iterations, league, teams_file_path, schedule_file_path, season_start = "auto"):
         self.iterations    = iterations
         self.league        = league
         self.teams_path    = teams_file_path
         self.schedule_path = schedule_file_path
+        self.season_start = season_start
+
+        # Protection against bad season_start input
+        if self.season_start != "auto":
+            try:
+                int(self.season_start)
+            except:
+                print("Couldn't convert season_start (%s) to an integer game value, defaulting to auto" %
+                      self.season_start)
+                self.season_start = "auto"
 
         if self.league == "NHL":
             self.Ngames = 82
@@ -50,10 +60,15 @@ class simulation:
             print("Schedule dictionary is empty, can't sim.")
             return
 
+        if self.season_start == "auto" or int(self.season_start) > 0:
+            print("Generating initial standings...\n")
+            standings = play_season.generate_standings_from_game_record(self.teams, self.schedule)
+            play_season.print_standings_sorted(standings, "wildcard")
+
         self.prep_sim_result()
         print("Running simulation with %i iterations" % self.iterations)
         for i in xrange(self.iterations):
-            season = play_season(self.teams, self.schedule)
+            season = play_season(self.teams, self.schedule, self.season_start)
             season.play_games_simple()
             season.determine_playoffs_NHL(self.result)
 
