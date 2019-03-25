@@ -6,16 +6,19 @@ from visualize import visualize
 ##############################
 
 # Read teams from file
-teams_file = "/home/joe/Desktop/fun/HockeySim/teams/NHL_2018-2019.txt"
-schedule_file = "/home/joe/Desktop/fun/HockeySim/schedules/NHL_2018-2019.csv"
 
-sims       = 2
-iterations = 1000
+
+sims          = 1
+iterations    = 5000
+teams_file    = "/home/joe/Desktop/fun/HockeySim/teams/NHL_2018-2019.txt"
+schedule_file = "/home/joe/Desktop/fun/HockeySim/schedules/NHL_2018-2019.csv"
+season_start  = "auto"
+
 doPlotting = True
 rootfile   = "test.root"
 treename   = "tree"
 
-sim = simulation(iterations, "NHL", teams_file, schedule_file)
+sim = simulation(iterations, "NHL", teams_file, schedule_file, season_start)
 plotter = None
 
 team_names = []
