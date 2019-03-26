@@ -26,13 +26,14 @@ for team in sim.teams:
     team_names.append(team.name)
 
 if doPlotting:
-    plotter = Visualize(rootfile, treename, team_names)
-    plotter.set_weight(100/iterations)
+    plotter = Visualize(rootfile, treename, sim.result)  # pass sim.result so we can assess what to save in the TTree
+    plotter.set_weight(100/iterations)  # not even sure why I'm using a setter here
 
 for i in xrange(sims):
     sim.run_simulation()
     if doPlotting:
         plotter.fill_TTree(i, sim.result)
 
-plotter.write_TFile()
-#plotter.draw_TGraphs()
+if doPlotting:
+    plotter.write_TFile()
+    #plotter.draw_TGraphs()
