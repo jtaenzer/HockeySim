@@ -1,5 +1,4 @@
-
-class team_info:
+class TeamInfo:
 
     def __init__(self, name, division):
         self.name = name

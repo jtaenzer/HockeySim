@@ -1,13 +1,16 @@
-import random, copy
-from team_info import team_info
+import random
+import copy
+import datetime
 
-class schedule_maker:
+
+# ScheduleMaker should probably be a base class with daughter classes for each league
+class ScheduleMaker:
 
     def __init__(self, league, teams, ngames, infile="", fileformat="csv"):
-        self.league     = league
-        self.teams      = teams
-        self.Ngames     = ngames
-        self.infile     = infile
+        self.league = league
+        self.teams = teams
+        self.Ngames = ngames
+        self.infile = infile
         self.fileformat = fileformat
 
         self.schedule = dict()
@@ -39,8 +42,21 @@ class schedule_maker:
             line_split = line.replace("\n", "").split(',')
             if line_split[0] == "Date":
                 continue
-            build_schedule["game"+str(game_counter)] = {"date": line_split[0], "visitor": line_split[1],
-                                                        "home": line_split[3]}
+            sched_key = "game" + str(game_counter)
+            build_schedule[sched_key] = {"date": line_split[0],
+                                         "visitor": line_split[1], "visitor_goals": line_split[2],
+                                         "home": line_split[3], "home_goals": line_split[4],
+                                         "OT": line_split[5]}
+
+            if build_schedule[sched_key]["visitor_goals"] and build_schedule[sched_key]["home_goals"]:
+                visitor = build_schedule[sched_key]["visitor"]
+                visitor_goals = int(build_schedule[sched_key]["visitor_goals"])
+                home = build_schedule[sched_key]["home"]
+                home_goals = int(build_schedule[sched_key]["home_goals"])
+                winner = visitor if visitor_goals > home_goals else home
+            else:
+                winner = ""
+            build_schedule[sched_key].update({"winner": winner})
             game_counter += 1
 
         if not self.chk_schedule_simple(build_schedule):
@@ -119,7 +135,7 @@ class schedule_maker:
         # Count how many games each team plays in the current schedule
         for game in build_schedule:
             for team in self.teams:
-                if team.name in build_schedule[game]['visitor'] or team.name in build_schedule[game]['home']:
+                if team.name in build_schedule[game]["visitor"] or team.name in build_schedule[game]["home"]:
                     team_game_counter[team.name] += 1
 
         # If any team doesn't have Ngames scheduled, return False
@@ -129,3 +145,33 @@ class schedule_maker:
 
             # If we survived the previous for loop, it should be safe to return True
         return True
+
+    @staticmethod
+    def find_first_unplayed_game(schedule):
+        for i in xrange(len(schedule)):
+            game = "game"+str(i)
+            if not schedule[game]["visitor_goals"] and not schedule[game]["home_goals"]:
+                return i
+        # This is not ideal, but we need to return something even if every game has been played
+        # returning 0 should force the entire season to be played
+        return 0
+
+    @staticmethod
+    def find_game_number_by_date(schedule, date):
+
+        if type(date) is not datetime.datetime:
+            print("find_game_number_by_date was passsed a non datetime.datetime object, returning 0")
+            return 0
+
+        for i in xrange(len(schedule)):
+            game = "game"+str(i)
+            game_date = datetime.datetime.strptime(schedule[game]["date"], '%Y-%m-%d')
+            if game_date > date:
+                return i
+        # Not ideal to return 0 here, should improve with downstream error handling
+        return 0
+
+    @staticmethod
+    def find_game_date_by_number(schedule, number):
+        game = "game" + str(number)
+        return datetime.datetime.strptime(schedule[game]["date"], '%Y-%m-%d')
