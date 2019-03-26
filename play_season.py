@@ -31,7 +31,11 @@ class PlaySeason:
         self.standings = self.generate_standings_from_game_record(self.teams, self.game_record)
 
     # This method should contain league specific rules so it isn't implemented here in the base class
-    def determine_playoffs(self, result):
+    def update_result(self, result):
+        print "determine_result should not be called from the base class.\n"
+
+    # This method should contain league specific rules so it isn't implemented here in the base class
+    def determine_playoffs(self):
         print "determine_playoffs should not be called from the base class.\n"
 
     # This method should contain league specific rules so it isn't implemented here in the base class
@@ -57,19 +61,25 @@ class PlaySeason:
     def print_standings_sorted(standings, output_format="league"):
         print "print_standings_sorted should not be called from the base class.\n"
 
-    # Format of the standings may change from league to league to this is not implemented in the base class
+    # Format of the standings may change from league to league so this is not implemented in the base class
     @staticmethod
     def print_standings_tuple(tup):
         print "print_standings_sorted should not be called from the base class.\n"
 
-    # Format of the standings may change from league to league to this is not implemented in the base class
+    # Format of the standings may change from league to league so this is not implemented in the base class
     @staticmethod
     def generate_initial_standings(teams):
         print "generate_initial_standings should not be called from the base class.\n"
 
+    # Format of the standings may change from league to league so this is not implemented in the base class
     @staticmethod
     def generate_standings_from_game_record(teams, game_record, end=None):
         print "generate_standings_from_game_record should not be called from the base class.\n"
+
+    # Format of the result may change from league to league so this is not implemented in the base class
+    @staticmethod
+    def prep_sim_result(teams):
+        print "prep_sim_result should not be called from the base class.\n"
 
     # Utility function to sort standings by points
     # This will probably be replaced in the child classes to be better determine tiebreaks
