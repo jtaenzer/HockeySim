@@ -9,7 +9,8 @@ class Visualize:
   def __init__(self, filename, treename, tbranches, option="RECREATE"):
     self.tfile = self.create_TFile(filename,option)
     self.ttree = self.create_TTree(treename,option)
-    self.tbranches = self.create_TBranches(tbranches,option)
+    self.tbranches = dict()
+    self.create_TBranches(tbranches,option)
     self.weight = 1
 
   def set_weight(self, weight):
@@ -24,20 +25,26 @@ class Visualize:
   def create_TTree(self, treename="simtree", option="RECREATE"):
     if option=="RECREATE": return r.TTree(treename,treename)
     if option=="READ": return self.tfile.Get(treename)
-    return r.TTree(treename,treename)
+    tree = r.TTree(treename,treename)
+    return tree
 
+  # assumes branchlist (i.e. result) is a dictionary of dictionaries, could it be more generic?
   def create_TBranches(self,branchlist, option="RECREATE"):
-    vardict={}
     for key in branchlist:
-      vardict[key]=array('f',[0])
-      vardict[key][0]=0
-      if option=="RECREATE": self.ttree.Branch(key.replace(" ","_"),vardict[key],key.replace(" ","_")+"/F")
-    return vardict
+      self.tbranches[key]=dict()
+      for var_name in branchlist[key]:
+        branch_name = key.replace(" ", "_") + "_" + var_name # can't have spaces in branch name strings
+        self.tbranches[key][var_name] = array('f',[0])
+        self.tbranches[key][var_name][0] = 0
+        if option == "RECREATE":
+          self.ttree.Branch(branch_name, self.tbranches[key][var_name], branch_name + "/F")
 
+  # assumes result is a dictionary of dictionaries, could it be more generic?
   def fill_TTree(self, entry, result):
     self.ttree.GetEntry(entry)
-    for key in self.tbranches:
-      self.tbranches[key][0]=result[key]
+    for key in result:
+      for var_name in result[key]:
+        self.tbranches[key][var_name][0]=float(result[key][var_name])
     self.ttree.Fill()
 
   def write_TFile(self):
