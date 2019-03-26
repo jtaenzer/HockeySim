@@ -2,7 +2,7 @@ from __future__ import division
 import datetime
 
 from schedule_maker import ScheduleMaker
-from play_season import PlaySeason
+from play_season_nhl import PlaySeasonNHL
 from team_info import TeamInfo
 
 
@@ -17,6 +17,7 @@ class Simulation:
         # Could be used for more in the future
         self.league = league
         if self.league == "NHL":
+            self.season_printer = PlaySeasonNHL
             self.Ngames = 82
         else:
             print("%s is not supported as a league" % self.league)
@@ -77,17 +78,18 @@ class Simulation:
             return
 
         print("Generating initial standings from date %s\n" % self.season_start_date.date())
-        standings = PlaySeason.generate_standings_from_game_record(self.teams, self.schedule, self.season_start)
-        PlaySeason.print_standings_sorted(standings, "wildcard")
+        standings = self.season_printer.generate_standings_from_game_record(self.teams, self.schedule, self.season_start)
+        self.season_printer.print_standings_sorted(standings, "wildcard")
 
         self.prep_sim_result()
         print("Running simulation with %i iterations" % self.iterations)
         for i in xrange(self.iterations):
             if i % 100000 == 0:
                 print "running sim", i
-            season = PlaySeason(self.teams, self.schedule, self.season_start)
+            if self.league == "NHL":
+                season = PlaySeasonNHL(self.teams, self.schedule, self.season_start)
             season.play_games_simple()
-            season.determine_playoffs_nhl(self.result)
+            season.determine_playoffs(self.result)
 
         print("Done, printing result")
         self.print_sim_result("Playoff %")
