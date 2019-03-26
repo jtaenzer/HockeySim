@@ -3,6 +3,7 @@ import copy
 import datetime
 
 
+# ScheduleMaker should probably be a base class with daughter classes for each league
 class ScheduleMaker:
 
     def __init__(self, league, teams, ngames, infile="", fileformat="csv"):
