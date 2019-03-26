@@ -4,7 +4,7 @@ from array import array
 import AtlasStyle as AS
 
 
-class visualize:
+class Visualize:
 
   def __init__(self, filename, treename, tbranches, option="RECREATE"):
     self.tfile = self.create_TFile(filename,option)

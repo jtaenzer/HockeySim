@@ -1,12 +1,12 @@
 from __future__ import division
 import datetime
 
-from schedule_maker import schedule_maker
-from play_season import play_season
-from team_info import team_info
+from schedule_maker import ScheduleMaker
+from play_season import PlaySeason
+from team_info import TeamInfo
 
 
-class simulation:
+class Simulation:
 
     def __init__(self, iterations, league, teams_file_path, schedule_file_path, season_start="auto"):
 
@@ -31,7 +31,7 @@ class simulation:
         # Set up the schedule based on the text file provided
         # No protection against bad input yet...
         self.schedule_path = schedule_file_path
-        schedmaker = schedule_maker(self.league, self.teams, self.Ngames, self.schedule_path)
+        schedmaker = ScheduleMaker(self.league, self.teams, self.Ngames, self.schedule_path)
         self.schedule = schedmaker.schedule
 
         # Protection against bad season_start input
@@ -77,15 +77,15 @@ class simulation:
             return
 
         print("Generating initial standings from date %s\n" % self.season_start_date.date())
-        standings = play_season.generate_standings_from_game_record(self.teams, self.schedule, self.season_start)
-        play_season.print_standings_sorted(standings, "wildcard")
+        standings = PlaySeason.generate_standings_from_game_record(self.teams, self.schedule, self.season_start)
+        PlaySeason.print_standings_sorted(standings, "wildcard")
 
         self.prep_sim_result()
         print("Running simulation with %i iterations" % self.iterations)
         for i in xrange(self.iterations):
-            if i % 1000 == 0:
+            if i % 100000 == 0:
                 print "running sim", i
-            season = play_season(self.teams, self.schedule, self.season_start)
+            season = PlaySeason(self.teams, self.schedule, self.season_start)
             season.play_games_simple()
             season.determine_playoffs_nhl(self.result)
 
@@ -108,6 +108,6 @@ class simulation:
         for line in teams_file:
             name = line.split(',')[0]
             div = line.split(',')[1].replace('\n', '')
-            team = team_info(name, div)
+            team = TeamInfo(name, div)
             teams.append(team)
         return teams

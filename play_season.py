@@ -2,7 +2,7 @@ import random
 import copy
 
 
-class play_season:
+class PlaySeason:
 
     def __init__(self, teams, schedule, start):
         self.teams = teams
@@ -173,28 +173,28 @@ class play_season:
               '{:<10}'.format('ROW')
 
         if output_format == "league":
-            standings_sorted = play_season.sort_by_points_row(standings)
-            play_season.print_standings_tuple(standings_sorted)
+            standings_sorted = PlaySeason.sort_by_points_row(standings)
+            PlaySeason.print_standings_tuple(standings_sorted)
 
         elif output_format == "conference":
-            atlantic, metro, central, pacific = play_season.sort_standings_by_division_nhl(standings)
-            east = play_season.merge_dicts(atlantic, metro)
-            west = play_season.merge_dicts(central, pacific)
+            atlantic, metro, central, pacific = PlaySeason.sort_standings_by_division_nhl(standings)
+            east = PlaySeason.merge_dicts(atlantic, metro)
+            west = PlaySeason.merge_dicts(central, pacific)
             print("\nEAST\n")
-            play_season.print_standings_tuple(play_season.sort_by_points_row(east))
+            PlaySeason.print_standings_tuple(PlaySeason.sort_by_points_row(east))
             print("\nWEST\n")
-            play_season.print_standings_tuple(play_season.sort_by_points_row(west))
+            PlaySeason.print_standings_tuple(PlaySeason.sort_by_points_row(west))
 
         elif output_format == "division":
-            atlantic, metro, central, pacific = play_season.sort_standings_by_division_nhl(standings)
+            atlantic, metro, central, pacific = PlaySeason.sort_standings_by_division_nhl(standings)
             print("\nATLANTIC\n")
-            play_season.print_standings_tuple(play_season.sort_by_points_row(atlantic))
+            PlaySeason.print_standings_tuple(PlaySeason.sort_by_points_row(atlantic))
             print("\nMETROPOLITAN\n")
-            play_season.print_standings_tuple(play_season.sort_by_points_row(metro))
+            PlaySeason.print_standings_tuple(PlaySeason.sort_by_points_row(metro))
             print("\nCENTRAL\n")
-            play_season.print_standings_tuple(play_season.sort_by_points_row(central))
+            PlaySeason.print_standings_tuple(PlaySeason.sort_by_points_row(central))
             print("\nPACIFIC\n")
-            play_season.print_standings_tuple(play_season.sort_by_points_row(pacific))
+            PlaySeason.print_standings_tuple(PlaySeason.sort_by_points_row(pacific))
 
         elif output_format == "wildcard":
 
@@ -202,14 +202,14 @@ class play_season:
             div_cutoff = 3
             wc_cutoff = 2
 
-            atlantic, metro, central, pacific = play_season.sort_standings_by_division_nhl(standings)
-            east = play_season.merge_dicts(atlantic, metro)
-            west = play_season.merge_dicts(central, pacific)
+            atlantic, metro, central, pacific = PlaySeason.sort_standings_by_division_nhl(standings)
+            east = PlaySeason.merge_dicts(atlantic, metro)
+            west = PlaySeason.merge_dicts(central, pacific)
 
-            atlantic_sorted = play_season.sort_by_points_row(atlantic)
-            metro_sorted = play_season.sort_by_points_row(metro)
-            central_sorted = play_season.sort_by_points_row(central)
-            pacific_sorted = play_season.sort_by_points_row(pacific)
+            atlantic_sorted = PlaySeason.sort_by_points_row(atlantic)
+            metro_sorted = PlaySeason.sort_by_points_row(metro)
+            central_sorted = PlaySeason.sort_by_points_row(central)
+            pacific_sorted = PlaySeason.sort_by_points_row(pacific)
 
             atlantic_top = dict()
             metro_top = dict()
@@ -225,8 +225,8 @@ class play_season:
                 west.pop(central_sorted[i][0])
                 west.pop(pacific_sorted[i][0])
 
-            east_sorted = play_season.sort_by_points_row(east)
-            west_sorted = play_season.sort_by_points_row(west)
+            east_sorted = PlaySeason.sort_by_points_row(east)
+            west_sorted = PlaySeason.sort_by_points_row(west)
 
             east_wc = dict()
             west_wc = dict()
@@ -239,32 +239,32 @@ class play_season:
             print("\nEAST\n")
             print("ATLANTIC")
             print("------------------------------------------------------------------------")
-            play_season.print_standings_tuple(play_season.sort_by_points_row(atlantic_top))
+            PlaySeason.print_standings_tuple(PlaySeason.sort_by_points_row(atlantic_top))
             print("------------------------------------------------------------------------")
             print("METROPOLITAN")
             print("------------------------------------------------------------------------")
-            play_season.print_standings_tuple(play_season.sort_by_points_row(metro_top))
+            PlaySeason.print_standings_tuple(PlaySeason.sort_by_points_row(metro_top))
             print("------------------------------------------------------------------------")
             print("WILDCARD")
             print("------------------------------------------------------------------------")
-            play_season.print_standings_tuple(play_season.sort_by_points_row(east_wc))
+            PlaySeason.print_standings_tuple(PlaySeason.sort_by_points_row(east_wc))
             print("------------------------------------------------------------------------")
-            play_season.print_standings_tuple(play_season.sort_by_points_row(east))
+            PlaySeason.print_standings_tuple(PlaySeason.sort_by_points_row(east))
 
             print("\nWEST\n")
             print("CENTRAL")
             print("------------------------------------------------------------------------")
-            play_season.print_standings_tuple(play_season.sort_by_points_row(central_top))
+            PlaySeason.print_standings_tuple(PlaySeason.sort_by_points_row(central_top))
             print("------------------------------------------------------------------------")
             print("PACIFIC")
             print("------------------------------------------------------------------------")
-            play_season.print_standings_tuple(play_season.sort_by_points_row(pacific_top))
+            PlaySeason.print_standings_tuple(PlaySeason.sort_by_points_row(pacific_top))
             print("------------------------------------------------------------------------")
             print("WILDCARD")
             print("------------------------------------------------------------------------")
-            play_season.print_standings_tuple(play_season.sort_by_points_row(west_wc))
+            PlaySeason.print_standings_tuple(PlaySeason.sort_by_points_row(west_wc))
             print("------------------------------------------------------------------------")
-            play_season.print_standings_tuple(play_season.sort_by_points_row(west))
+            PlaySeason.print_standings_tuple(PlaySeason.sort_by_points_row(west))
         print("\n")
 
     # Decide if a game went to overtime assuming 25% of games go to OT
@@ -300,7 +300,7 @@ class play_season:
 
     @staticmethod
     def generate_standings_from_game_record(teams, game_record, end=None):
-        standings = play_season.generate_initial_standings_nhl(teams)
+        standings = PlaySeason.generate_initial_standings_nhl(teams)
 
         for i in xrange(len(game_record)):
             game_key = "game"+str(i)

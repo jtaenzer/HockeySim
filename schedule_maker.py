@@ -3,7 +3,7 @@ import copy
 import datetime
 
 
-class schedule_maker:
+class ScheduleMaker:
 
     def __init__(self, league, teams, ngames, infile="", fileformat="csv"):
         self.league = league
