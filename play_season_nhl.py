@@ -10,15 +10,26 @@ class PlaySeasonNHL(PlaySeason):
         self.div_cutoff = 3  # Number of teams from each division that make the playoffs
         self.wc_cutoff = 2  # Number of teams from each conference that make the playoffs as wildcards
 
+    # Fill the result dictionary with whatever information we want to save
+    # The format of result is determine elsewhere, could cause trouble later
+    def update_result(self, result):
+        playoff_teams = self.determine_playoffs()
+        for team in self.teams:
+            if team.name in playoff_teams:
+                result[team.name]["playoffs"] += 1
+            result[team.name]["wins"] += self.standings[team.name]["wins"]
+            result[team.name]["losses"] += self.standings[team.name]["losses"]
+            result[team.name]["ROW"] += self.standings[team.name]["ROW"]
+            result[team.name]["OTlosses"] += self.standings[team.name]["OTlosses"]
+            result[team.name]["points"] += self.standings[team.name]["points"]
+
+
     # Determine which teams made the playoffs based on the NHL wildcard format
     # Tie-breaking based on ROW is implemented
     # Tie-breaking based on head-to-head games and goals scored not implemented. Not clear how to do this yet.
-    def determine_playoffs(self, result):
-
-        # Should these by hard coded??
-        div_cutoff = 3  # top 3 teams from each division automatically make the playoffs
-        wildcard_cutoff = 2  # The top 2 teams from each conference that didn't get a div spot take the wildcard spots
-
+    # This method could be static if we passed the standings to it, should it be?
+    def determine_playoffs(self):
+        playoff_team_list = []
         atlantic, metro, central, pacific = self.sort_standings_by_division(self.standings)
         east = self.merge_dicts(atlantic, metro)
         west = self.merge_dicts(central, pacific)
@@ -28,26 +39,30 @@ class PlaySeasonNHL(PlaySeason):
         central_sorted = self.chk_tiebreaks(self.sort_by_points_row(central))
         pacific_sorted = self.chk_tiebreaks(self.sort_by_points_row(pacific))
 
-        for i in xrange(div_cutoff):
-            result[atlantic_sorted[i][0]] += 1
-            result[metro_sorted[i][0]] += 1
+        # Find the top self.div_cutoff (3) teams in each division and add them to playoff_team_list
+        # Pop those same teams from east and west so we can use east and west to determine the wildcard spots
+        for i in xrange(self.div_cutoff):
+            playoff_team_list.append(atlantic_sorted[i][0])
+            playoff_team_list.append(metro_sorted[i][0])
+            playoff_team_list.append(central_sorted[i][0])
+            playoff_team_list.append(pacific_sorted[i][0])
             east.pop(atlantic_sorted[i][0])
             east.pop(metro_sorted[i][0])
-            result[central_sorted[i][0]] += 1
-            result[pacific_sorted[i][0]] += 1
             west.pop(central_sorted[i][0])
             west.pop(pacific_sorted[i][0])
 
         east_sorted = self.chk_tiebreaks(self.sort_by_points_row(east))
         west_sorted = self.chk_tiebreaks(self.sort_by_points_row(west))
 
-        for i in xrange(wildcard_cutoff):
-            result[east_sorted[i][0]] += 1
-            result[west_sorted[i][0]] += 1
+        for i in xrange(self.wc_cutoff):
+            playoff_team_list.append(east_sorted[i][0])
+            playoff_team_list.append(west_sorted[i][0])
 
-        # This method checks for ties and re-orders the standings based on tie-breakers
-        # For now only the head-to-head record is checked
+        return playoff_team_list
 
+
+    # This method checks for ties and re-orders the standings based on tie-breakers
+    # For now only the head-to-head record is checked
     def chk_tiebreaks(self, standings_sorted):
         checkedpairs = []
         for i in xrange(len(standings_sorted)):
@@ -158,7 +173,7 @@ class PlaySeasonNHL(PlaySeason):
     # Prints the standings in a nicely formatted way
     # Currently gets called to print initial standings when starting a sim mid-season
     @staticmethod
-    def print_standings_sorted(standings, output_format="league"):
+    def print_standings_sorted(standings, output_format="wildcard"):
 
         print '{:<25}'.format('Team'), \
               '{:<10}'.format('Wins'), \
@@ -315,3 +330,22 @@ class PlaySeasonNHL(PlaySeason):
     # Utility function to sort by points and ROW, since we do this a lot
     def sort_by_points_row(standings):
         return sorted(standings.items(), key=lambda kv: (kv[1]['points'], kv[1]['ROW']), reverse=True)
+
+    # Create an empty dictionary to hold the simulated result
+    # For now the result is just the count of how many times each team makes the playoffs
+    # More information that could be be added:
+    # - avg wins/losses/pts
+    # -
+    # This method is in PlaySeason (and daughters) since the format of the result will depend on the league
+    @staticmethod
+    def prep_sim_result(teams):
+        result = dict()
+        for team in teams:
+            result[team.name] = dict()
+            result[team.name].update({"playoffs": 0})
+            result[team.name].update({"wins": 0})
+            result[team.name].update({"losses": 0})
+            result[team.name].update({"OTlosses": 0})
+            result[team.name].update({"points": 0})
+            result[team.name].update({"ROW": 0})
+        return result
