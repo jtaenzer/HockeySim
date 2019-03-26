@@ -25,8 +25,8 @@ class PlaySeasonNHL(PlaySeason):
 
 
     # Determine which teams made the playoffs based on the NHL wildcard format
-    # Tie-breaking based on ROW is implemented
-    # Tie-breaking based on head-to-head games and goals scored not implemented. Not clear how to do this yet.
+    # Tie-breaking based on ROW and head to head records are implemented
+    # Tie-breaking based on goal differential is not implemented, requires more thought
     # This method could be static if we passed the standings to it, should it be?
     def determine_playoffs(self):
         playoff_team_list = []
