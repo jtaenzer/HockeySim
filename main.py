@@ -14,7 +14,7 @@ teams_file    = "/home/joe/Desktop/fun/HockeySim/teams/NHL_2018-2019.txt"
 schedule_file = "/home/joe/Desktop/fun/HockeySim/schedules/NHL_2018-2019.csv"
 season_start  = 0
 
-doPlotting = True
+doPlotting = False # should be false by default since it requires ROOT to be installed
 rootfile   = "test.root"
 treename   = "tree"
 
