@@ -7,7 +7,7 @@ class PlaySeasonNHL(PlaySeason):
 
     def __init__(self, teams, schedule, start):
         PlaySeason.__init__(self, teams, schedule, start)
-        self.standings = self.generate_initial_standings(self.teams)
+        self.standings = self.generate_standings_from_game_record(self.teams, self.game_record, self.start)
         self.div_cutoff = 3  # Number of teams from each division that make the playoffs
         self.wc_cutoff = 2  # Number of teams from each conference that make the playoffs as wildcards
 
