@@ -8,7 +8,7 @@ class PlaySeason:
         self.teams = teams
         self.schedule = schedule
         self.game_record = copy.deepcopy(self.schedule)
-        self.standings = None
+        self.standings = None # Has to be created in daughter classes
         self.start = start
 
     # Run through the schedule and decide each game with a coin flip
