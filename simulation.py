@@ -1,4 +1,6 @@
 from __future__ import division
+import time
+import sys
 import datetime
 
 from schedule_maker import ScheduleMaker
@@ -78,9 +80,18 @@ class Simulation:
         self.season_obj.print_standings_sorted(self.teams, standings)
 
         print("Running simulation with %i iterations" % self.iterations)
+
+        # set up progress bar
+        toolbar_width = 100
+        # Make sure the number of iterations is a multiple of 100
+        if self.iterations % toolbar_width != 0:
+            self.iterations -= self.iterations % toolbar_width
+        sys.stdout.write("Progress: [%s]" % (" " * toolbar_width))
+        sys.stdout.flush()
+        sys.stdout.write("\b" * (toolbar_width+1)) # return to start of line, after '['
+
         for i in xrange(self.iterations):
-            if i % 100000 == 0:  # "poor man's progress bar"
-                print "running sim", i
+
             season = None
             if self.league == "NHL":
                 season = PlaySeasonNHL(self.teams, self.schedule, self.season_start)
@@ -91,7 +102,12 @@ class Simulation:
                 print "Couldn't determine what kind of season to play, aborting."
                 break
 
-        print("Done, printing result")
+            # Update the progress bar
+            if i % (self.iterations/toolbar_width) == 0:
+                sys.stdout.write("-")
+                sys.stdout.flush()
+
+        print("\nDone, printing result")
         self.print_sim_result_sorted()
 
     # Reset the result
