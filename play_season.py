@@ -18,9 +18,6 @@ class PlaySeason:
     #  Doing this in a simple way will be susceptible to fluctuations, how to avoid that? Cap the weight at some value?
     # -There should be a better way to do the entries to the standings dictionary...
     def play_games_simple(self, allow_ot=True):
-
-        self.standings = self.generate_initial_standings(self.teams)
-
         for i in xrange(len(self.game_record)):
             if i < self.start:
                 continue
