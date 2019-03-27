@@ -30,7 +30,7 @@ class PlaySeasonNHL(PlaySeason):
     # This method could be static if we passed the standings to it, should it be?
     def determine_playoffs(self):
         playoff_team_list = []
-        atlantic, metro, central, pacific = self.sort_standings_by_division(self.standings)
+        atlantic, metro, central, pacific = self.sort_standings_by_division(self.teams, self.standings)
         east = self.merge_dicts(atlantic, metro)
         west = self.merge_dicts(central, pacific)
 
@@ -151,28 +151,28 @@ class PlaySeasonNHL(PlaySeason):
     # Sort the standings by NHL divisions
     # Used in determine_playoffs_simple()
     @staticmethod
-    def sort_standings_by_division(standings):
+    def sort_standings_by_division(teams, standings):
         atlantic = dict()
         metro = dict()
         central = dict()
         pacific = dict()
 
-        for team in standings:
-            if standings[team]['div'] == 'a':
-                atlantic[team] = standings[team]
-            elif standings[team]['div'] == 'm':
-                metro[team] = standings[team]
-            elif standings[team]['div'] == 'c':
-                central[team] = standings[team]
-            elif standings[team]['div'] == 'p':
-                pacific[team] = standings[team]
+        for team in teams:
+            if team.division == 'a':
+                atlantic[team.name] = standings[team.name]
+            elif team.division == 'm':
+                metro[team.name] = standings[team.name]
+            elif team.division == 'c':
+                central[team.name] = standings[team.name]
+            elif team.division == 'p':
+                pacific[team.name] = standings[team.name]
 
         return atlantic, metro, central, pacific
 
     # Prints the standings in a nicely formatted way
     # Currently gets called to print initial standings when starting a sim mid-season
     @staticmethod
-    def print_standings_sorted(standings, output_format="wildcard"):
+    def print_standings_sorted(teams, standings, output_format="wildcard"):
 
         print '{:<25}'.format('Team'), \
               '{:<10}'.format('Wins'), \
@@ -186,7 +186,7 @@ class PlaySeasonNHL(PlaySeason):
             PlaySeasonNHL.print_standings_tuple(standings_sorted)
 
         elif output_format == "conference":
-            atlantic, metro, central, pacific = PlaySeasonNHL.sort_standings_by_division(standings)
+            atlantic, metro, central, pacific = PlaySeasonNHL.sort_standings_by_division(teams, standings)
             east = PlaySeasonNHL.merge_dicts(atlantic, metro)
             west = PlaySeasonNHL.merge_dicts(central, pacific)
             print("\nEAST\n")
@@ -195,7 +195,7 @@ class PlaySeasonNHL(PlaySeason):
             PlaySeasonNHL.print_standings_tuple(PlaySeasonNHL.sort_by_points_row(west))
 
         elif output_format == "division":
-            atlantic, metro, central, pacific = PlaySeasonNHL.sort_standings_by_division(standings)
+            atlantic, metro, central, pacific = PlaySeasonNHL.sort_standings_by_division(teams, standings)
             print("\nATLANTIC\n")
             PlaySeasonNHL.print_standings_tuple(PlaySeasonNHL.sort_by_points_row(atlantic))
             print("\nMETROPOLITAN\n")
@@ -211,7 +211,7 @@ class PlaySeasonNHL(PlaySeason):
             div_cutoff = 3
             wc_cutoff = 2
 
-            atlantic, metro, central, pacific = PlaySeasonNHL.sort_standings_by_division(standings)
+            atlantic, metro, central, pacific = PlaySeasonNHL.sort_standings_by_division(teams, standings)
             east = PlaySeasonNHL.merge_dicts(atlantic, metro)
             west = PlaySeasonNHL.merge_dicts(central, pacific)
 
