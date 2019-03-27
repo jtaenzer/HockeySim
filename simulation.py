@@ -103,6 +103,16 @@ class Simulation:
             print("%s %.2f" % ('{:<25}'.format(team), mult_quantity))
         print("")
 
+    # Will replace print_sim_result
+    # Should print every quantity in result in a nicely formatted way
+    # Potentially needs to be moved into play_season_* if it is to be organized according to league structure
+    def print_sim_result_new(self):
+        print("under construction...")
+
+    # Reset the result
+    def clear_sim_result(self):
+        self.result = self.season_obj.prep_sim_result(self.teams)
+
     @staticmethod
     def read_teams_file(path):
         teams = []
