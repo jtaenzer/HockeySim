@@ -75,7 +75,7 @@ class Simulation:
         print("Generating initial standings from date %s\n" % self.season_start_date.date())
         # Here we use our season object to call some static methods from whichever class
         standings = self.season_obj.generate_standings_from_game_record(self.teams, self.schedule, self.season_start)
-        self.season_obj.print_standings_sorted(standings)
+        self.season_obj.print_standings_sorted(self.teams, standings)
 
         print("Running simulation with %i iterations" % self.iterations)
         for i in xrange(self.iterations):
@@ -92,26 +92,85 @@ class Simulation:
                 break
 
         print("Done, printing result")
-        self.print_sim_result("Playoff %")
-
-    # Print the result dictionary
-    def print_sim_result(self, quantity, mult=100):
-        print("")
-        print("%s %s" % ('{:<25}'.format('Team'), quantity))
-        for team in self.result:
-            mult_quantity = mult * self.result[team]["playoffs"] / self.iterations
-            print("%s %.2f" % ('{:<25}'.format(team), mult_quantity))
-        print("")
-
-    # Will replace print_sim_result
-    # Should print every quantity in result in a nicely formatted way
-    # Potentially needs to be moved into play_season_* if it is to be organized according to league structure
-    def print_sim_result_new(self):
-        print("under construction...")
+        self.print_sim_result_sorted()
 
     # Reset the result
     def clear_sim_result(self):
         self.result = self.season_obj.prep_sim_result(self.teams)
+
+    # Will replace print_sim_result
+    # Should print every quantity in result in a nicely formatted way
+    # Potentially needs to be moved into play_season_* if it is to be organized according to league structure
+    def print_sim_result(self):
+        # This shouldn't be hardcoded, figure out how to fix it later
+        var_order = ["playoffs", "points", "ROW", "wins", "losses", "OTlosses"]
+
+        head_str = '{:<25}'.format('Team')
+        head_str += '{:<20}'.format('Avg Playoff %')
+        head_str += '{:<15}'.format('Avg Points')
+        head_str += '{:<15}'.format('Avg ROW')
+        head_str += '{:<15}'.format('Avg Wins')
+        head_str += '{:<15}'.format('Avg Losses')
+        head_str += '{:<15}'.format('Avg OT Losses')
+        print("")
+        print head_str
+
+        for team in self.result:
+            team_str = '{:<25}'.format(team)
+            for var_key in var_order:
+                quantity = self.result[team][var_key] / self.iterations
+                if var_key == "playoffs":
+                    quantity = 100*quantity
+                    team_str += '{:<20}'.format(str(quantity)+"%")
+                else:
+                    team_str += '{:<15}'.format(str(quantity))
+            print team_str
+
+    def print_sim_result_sorted(self):
+        # This shouldn't be hardcoded, figure out how to fix it later
+        var_order = ["playoffs", "points", "ROW", "wins", "losses", "OTlosses"]
+
+        head_str = '{:<25}'.format('Team')
+        head_str += '{:<20}'.format('Avg Playoff %')
+        head_str += '{:<15}'.format('Avg Points')
+        head_str += '{:<15}'.format('Avg ROW')
+        head_str += '{:<15}'.format('Avg Wins')
+        head_str += '{:<15}'.format('Avg Losses')
+        head_str += '{:<15}'.format('Avg OT Losses')
+
+        atlantic, metro, central, pacific = self.season_obj.sort_standings_by_division(self.teams, self.result)
+        east = self.season_obj.merge_dicts(atlantic, metro)
+        west = self.season_obj.merge_dicts(central, pacific)
+        east_sorted = sorted(east.items(), key=lambda kv: kv[1]["playoffs"], reverse=True)
+        west_sorted = sorted(west.items(), key=lambda kv: kv[1]["playoffs"], reverse=True)
+
+        print("\nEAST\n")
+        print(head_str)
+        print("-------------------------------------------------------------------------------------------------------")
+        for i in xrange(len(east_sorted)):
+            team_str = '{:<25}'.format(east_sorted[i][0])
+            for var_key in var_order:
+                quantity = east_sorted[i][1][var_key]/self.iterations
+                if var_key == "playoffs":
+                    quantity = 100*quantity
+                    team_str += '{:<20}'.format(str(quantity)+"%")
+                else:
+                    team_str += '{:<15}'.format(str(quantity))
+            print team_str
+
+        print("\nWEST\n")
+        print(head_str)
+        print("-------------------------------------------------------------------------------------------------------")
+        for i in xrange(len(west_sorted)):
+            team_str = '{:<25}'.format(west_sorted[i][0])
+            for var_key in var_order:
+                quantity = west_sorted[i][1][var_key] / self.iterations
+                if var_key == "playoffs":
+                    quantity = 100 * quantity
+                    team_str += '{:<20}'.format(str(quantity) + "%")
+                else:
+                    team_str += '{:<15}'.format(str(quantity))
+            print team_str
 
     @staticmethod
     def read_teams_file(path):
