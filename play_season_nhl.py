@@ -1,3 +1,4 @@
+from __future__ import division
 from play_season import PlaySeason
 import random
 
@@ -10,9 +11,49 @@ class PlaySeasonNHL(PlaySeason):
         self.div_cutoff = 3  # Number of teams from each division that make the playoffs
         self.wc_cutoff = 2  # Number of teams from each conference that make the playoffs as wildcards
 
+    # This doesn't really return a weight...
+    # Calculates the point % of both teams, normalizes the sum to 1 and returns the mid point
+    # The end result is that the team with the greater point % will be more likely to win
     def get_weight(self, game):
-        print("still under construction, returning coin flip")
-        return 50
+        # Sanity check, game should always be a list of two teams
+        if len(game) != 2:
+            print("PlaySeasonNHL.get_weight : len(game) != 2, returning coin flip")
+            return 50
+
+        point_percent = []
+        sum = 0
+        for team in game:
+            points = self.standings[team]["points"]
+            games_played = self.standings[team]["wins"] + self.standings[team]["losses"] + \
+                           self.standings[team]["OTlosses"]
+            # Return a coin flip if one of the teams hasn't no points or games played
+            if points == 0 or games_played == 0:
+                return 50
+            point_percent.append(points/games_played)
+            sum+=point_percent[-1]
+
+        weight = 1 - point_percent[0] / sum
+        if weight < 0 or weight > 1:
+            print("PlaySeasonNHL.get_weight : weight (%s) is less than 0 or greater than 1, returning coin flip"
+                  % str(weight))
+            return 50
+
+        return 100*weight
+
+    def update_standings(self, game, winner, ot=""):
+        # loop over teams in game and update standings accordingly
+        for team in game:
+            if team == winner:
+                self.standings[team]["wins"] += 1
+                ROW = 1 if ot != "SO" else 0 # SO wins don't get added to ROW
+                self.standings[team]["ROW"] += ROW
+                self.standings[team]["points"] += 2
+            else:
+                if ot: # ot is an empty string for games decided in regulation
+                    self.standings[team]["OTlosses"] += 1
+                    self.standings[team]["points"] += 1
+                else:
+                    self.standings[team]["losses"] += 1
 
     # Fill the result dictionary with whatever information we want to save
     # The format of result is determine elsewhere, could cause trouble later
