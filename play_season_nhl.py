@@ -83,14 +83,13 @@ class PlaySeasonNHL(PlaySeason):
                 checkedpairs.append([i, j])
         return standings_sorted
 
-        # Check the head to head record for tie breaking
-        # Rules (per NHL.com):
-        # Team with that earned the most points in games between the two teams wins the tie-break
-        # When the teams played an odd number of games, points earned in the first game played in the city that had
-        # the extra game shall not be included.
-        # The last fallback if the teams are still tied is the team with the greater goal differential -- not clear what
-        # to do there, just return random for now
-
+    # Check the head to head record for tie breaking
+    # Rules (per NHL.com):
+    # Team with that earned the most points in games between the two teams wins the tie-break
+    # When the teams played an odd number of games, points earned in the first game played in the city that had
+    # the extra game shall not be included.
+    # The last fallback if the teams are still tied is the team with the greater goal differential -- not clear what
+    # to do there, just return random for now
     def chk_head_to_head(self, team1, team2):
 
         # First for convenience find the head-to-head games in our self.game_record and put them in a smaller dictionary
