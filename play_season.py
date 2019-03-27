@@ -8,7 +8,7 @@ class PlaySeason:
         self.teams = teams
         self.schedule = schedule
         self.game_record = copy.deepcopy(self.schedule)
-        self.standings = None
+        self.standings = None # Has to be created in daughter classes
         self.start = start
 
     # Run through the schedule and decide each game with a coin flip
@@ -27,12 +27,47 @@ class PlaySeason:
             ot = self.overtime_check() if allow_ot else ""
             self.game_record[sched_key].update({"winner": winner})
             self.game_record[sched_key].update({'OT': ot})
+            self.update_standings(game, winner, ot)
 
-        self.standings = self.generate_standings_from_game_record(self.teams, self.game_record)
+    # Run through the schedule and decide each game with a weighted random choice
+    # Teams with greater point % are more likely to win
+    # This first attempt is likely to be unstable...
+    def play_games_weighted(self, allow_ot=True):
+        for i in xrange(len(self.game_record)):
+            if i < self.start:
+                continue
+            sched_key = "game"+str(i)
+            game = [self.schedule[sched_key]["visitor"], self.schedule[sched_key]["home"]]
+            weight = self.get_weight(game)
+            winner = self.get_winner_weighted(game, weight)
+            ot = self.overtime_check() if allow_ot else ""
+            self.game_record[sched_key].update({"winner": winner})
+            self.game_record[sched_key].update({'OT': ot})
+            self.update_standings(game, winner, ot)
+
+    def get_weight(self, game):
+        print "get_weights should not be called in the base class.\n"
+
+    def get_winner_weighted(self, game, weight):
+        if weight < 0 or weight > 100:
+            print ("PlaySeasaon.get_winner_weighted : weight (%s) not between 0 and 100, returning a random choice"
+                   % str(weight))
+            return random.choice(game)
+        if len(game) != 2:
+            print ("PlaySeasaon.get_winner_weighted : input game has wrong length, returning a random choice")
+            return random.choice(game)
+
+        if random.randint(0, 100) < weight:
+            return game[0]
+        else: return game[1]
+
+    # This method should contain league specific rules so it isn't implemented here in the base class
+    def update_standings(self, game, winner, ot=""):
+        print "update_standings should not be called from the base class.\n"
 
     # This method should contain league specific rules so it isn't implemented here in the base class
     def update_result(self, result):
-        print "determine_result should not be called from the base class.\n"
+        print "update_result should not be called from the base class.\n"
 
     # This method should contain league specific rules so it isn't implemented here in the base class
     def determine_playoffs(self):

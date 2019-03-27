@@ -14,6 +14,7 @@ teams_file    = "/home/joe/Desktop/fun/HockeySim/teams/NHL_2018-2019.txt"
 schedule_file = "/home/joe/Desktop/fun/HockeySim/schedules/NHL_2018-2019.csv"
 season_start  = 0
 
+
 doPlotting = False # should be false by default since it requires ROOT to be installed
 rootfile   = "test.root"
 treename   = "tree"
@@ -33,6 +34,7 @@ for i in xrange(sims):
     sim.run_simulation()
     if doPlotting:
         plotter.fill_TTree(i, sim.result)
+    sim.clear_sim_result()
 
 if doPlotting:
     plotter.write_TFile()

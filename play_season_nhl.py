@@ -1,3 +1,4 @@
+from __future__ import division
 from play_season import PlaySeason
 import random
 
@@ -6,9 +7,53 @@ class PlaySeasonNHL(PlaySeason):
 
     def __init__(self, teams, schedule, start):
         PlaySeason.__init__(self, teams, schedule, start)
-        self.standings = self.generate_initial_standings(self.teams)
+        self.standings = self.generate_standings_from_game_record(self.teams, self.game_record, self.start)
         self.div_cutoff = 3  # Number of teams from each division that make the playoffs
         self.wc_cutoff = 2  # Number of teams from each conference that make the playoffs as wildcards
+
+    # This doesn't really return a weight...
+    # Calculates the point % of both teams, normalizes the sum to 1 and returns the mid point
+    # The end result is that the team with the greater point % will be more likely to win
+    def get_weight(self, game):
+        # Sanity check, game should always be a list of two teams
+        if len(game) != 2:
+            print("PlaySeasonNHL.get_weight : len(game) != 2, returning coin flip")
+            return 50
+
+        point_percent = []
+        sum = 0
+        for team in game:
+            points = self.standings[team]["points"]
+            games_played = self.standings[team]["wins"] + self.standings[team]["losses"] + \
+                           self.standings[team]["OTlosses"]
+            # Return a coin flip if one of the teams hasn't no points or games played
+            if points == 0 or games_played == 0:
+                return 50
+            point_percent.append(points/games_played)
+            sum+=point_percent[-1]
+
+        weight = 1 - point_percent[0] / sum
+        if weight < 0 or weight > 1:
+            print("PlaySeasonNHL.get_weight : weight (%s) is less than 0 or greater than 1, returning coin flip"
+                  % str(weight))
+            return 50
+
+        return 100*weight
+
+    def update_standings(self, game, winner, ot=""):
+        # loop over teams in game and update standings accordingly
+        for team in game:
+            if team == winner:
+                self.standings[team]["wins"] += 1
+                ROW = 1 if ot != "SO" else 0 # SO wins don't get added to ROW
+                self.standings[team]["ROW"] += ROW
+                self.standings[team]["points"] += 2
+            else:
+                if ot: # ot is an empty string for games decided in regulation
+                    self.standings[team]["OTlosses"] += 1
+                    self.standings[team]["points"] += 1
+                else:
+                    self.standings[team]["losses"] += 1
 
     # Fill the result dictionary with whatever information we want to save
     # The format of result is determine elsewhere, could cause trouble later
@@ -25,12 +70,12 @@ class PlaySeasonNHL(PlaySeason):
 
 
     # Determine which teams made the playoffs based on the NHL wildcard format
-    # Tie-breaking based on ROW is implemented
-    # Tie-breaking based on head-to-head games and goals scored not implemented. Not clear how to do this yet.
+    # Tie-breaking based on ROW and head to head records are implemented
+    # Tie-breaking based on goal differential is not implemented, requires more thought
     # This method could be static if we passed the standings to it, should it be?
     def determine_playoffs(self):
         playoff_team_list = []
-        atlantic, metro, central, pacific = self.sort_standings_by_division(self.standings)
+        atlantic, metro, central, pacific = self.sort_standings_by_division(self.teams, self.standings)
         east = self.merge_dicts(atlantic, metro)
         west = self.merge_dicts(central, pacific)
 
@@ -60,7 +105,6 @@ class PlaySeasonNHL(PlaySeason):
 
         return playoff_team_list
 
-
     # This method checks for ties and re-orders the standings based on tie-breakers
     # For now only the head-to-head record is checked
     def chk_tiebreaks(self, standings_sorted):
@@ -83,14 +127,13 @@ class PlaySeasonNHL(PlaySeason):
                 checkedpairs.append([i, j])
         return standings_sorted
 
-        # Check the head to head record for tie breaking
-        # Rules (per NHL.com):
-        # Team with that earned the most points in games between the two teams wins the tie-break
-        # When the teams played an odd number of games, points earned in the first game played in the city that had
-        # the extra game shall not be included.
-        # The last fallback if the teams are still tied is the team with the greater goal differential -- not clear what
-        # to do there, just return random for now
-
+    # Check the head to head record for tie breaking
+    # Rules (per NHL.com):
+    # Team with that earned the most points in games between the two teams wins the tie-break
+    # When the teams played an odd number of games, points earned in the first game played in the city that had
+    # the extra game shall not be included.
+    # The last fallback if the teams are still tied is the team with the greater goal differential -- not clear what
+    # to do there, just return random for now
     def chk_head_to_head(self, team1, team2):
 
         # First for convenience find the head-to-head games in our self.game_record and put them in a smaller dictionary
@@ -152,28 +195,28 @@ class PlaySeasonNHL(PlaySeason):
     # Sort the standings by NHL divisions
     # Used in determine_playoffs_simple()
     @staticmethod
-    def sort_standings_by_division(standings):
+    def sort_standings_by_division(teams, standings):
         atlantic = dict()
         metro = dict()
         central = dict()
         pacific = dict()
 
-        for team in standings:
-            if standings[team]['div'] == 'a':
-                atlantic[team] = standings[team]
-            elif standings[team]['div'] == 'm':
-                metro[team] = standings[team]
-            elif standings[team]['div'] == 'c':
-                central[team] = standings[team]
-            elif standings[team]['div'] == 'p':
-                pacific[team] = standings[team]
+        for team in teams:
+            if team.division == 'a':
+                atlantic[team.name] = standings[team.name]
+            elif team.division == 'm':
+                metro[team.name] = standings[team.name]
+            elif team.division == 'c':
+                central[team.name] = standings[team.name]
+            elif team.division == 'p':
+                pacific[team.name] = standings[team.name]
 
         return atlantic, metro, central, pacific
 
     # Prints the standings in a nicely formatted way
     # Currently gets called to print initial standings when starting a sim mid-season
     @staticmethod
-    def print_standings_sorted(standings, output_format="wildcard"):
+    def print_standings_sorted(teams, standings, output_format="wildcard"):
 
         print '{:<25}'.format('Team'), \
               '{:<10}'.format('Wins'), \
@@ -187,7 +230,7 @@ class PlaySeasonNHL(PlaySeason):
             PlaySeasonNHL.print_standings_tuple(standings_sorted)
 
         elif output_format == "conference":
-            atlantic, metro, central, pacific = PlaySeasonNHL.sort_standings_by_division(standings)
+            atlantic, metro, central, pacific = PlaySeasonNHL.sort_standings_by_division(teams, standings)
             east = PlaySeasonNHL.merge_dicts(atlantic, metro)
             west = PlaySeasonNHL.merge_dicts(central, pacific)
             print("\nEAST\n")
@@ -196,7 +239,7 @@ class PlaySeasonNHL(PlaySeason):
             PlaySeasonNHL.print_standings_tuple(PlaySeasonNHL.sort_by_points_row(west))
 
         elif output_format == "division":
-            atlantic, metro, central, pacific = PlaySeasonNHL.sort_standings_by_division(standings)
+            atlantic, metro, central, pacific = PlaySeasonNHL.sort_standings_by_division(teams, standings)
             print("\nATLANTIC\n")
             PlaySeasonNHL.print_standings_tuple(PlaySeasonNHL.sort_by_points_row(atlantic))
             print("\nMETROPOLITAN\n")
@@ -212,7 +255,7 @@ class PlaySeasonNHL(PlaySeason):
             div_cutoff = 3
             wc_cutoff = 2
 
-            atlantic, metro, central, pacific = PlaySeasonNHL.sort_standings_by_division(standings)
+            atlantic, metro, central, pacific = PlaySeasonNHL.sort_standings_by_division(teams, standings)
             east = PlaySeasonNHL.merge_dicts(atlantic, metro)
             west = PlaySeasonNHL.merge_dicts(central, pacific)
 
