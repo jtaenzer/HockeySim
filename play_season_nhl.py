@@ -10,6 +10,10 @@ class PlaySeasonNHL(PlaySeason):
         self.div_cutoff = 3  # Number of teams from each division that make the playoffs
         self.wc_cutoff = 2  # Number of teams from each conference that make the playoffs as wildcards
 
+    def get_weight(self, game):
+        print("still under construction, returning coin flip")
+        return 50
+
     # Fill the result dictionary with whatever information we want to save
     # The format of result is determine elsewhere, could cause trouble later
     def update_result(self, result):
@@ -59,7 +63,6 @@ class PlaySeasonNHL(PlaySeason):
             playoff_team_list.append(west_sorted[i][0])
 
         return playoff_team_list
-
 
     # This method checks for ties and re-orders the standings based on tie-breakers
     # For now only the head-to-head record is checked
