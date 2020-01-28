@@ -90,7 +90,7 @@ class Simulation:
         sys.stdout.flush()
         sys.stdout.write("\b" * (toolbar_width+1)) # return to start of line, after '['
 
-        for i in xrange(self.iterations):
+        for i in range(self.iterations):
 
             season = None
             if self.league == "NHL":
@@ -99,7 +99,7 @@ class Simulation:
                 season.play_games_simple()
                 season.update_result(self.result)
             else:
-                print "Couldn't determine what kind of season to play, aborting."
+                print("Couldn't determine what kind of season to play, aborting.")
                 break
 
             # Update the progress bar
@@ -129,7 +129,7 @@ class Simulation:
         head_str += '{:<15}'.format('Avg Losses')
         head_str += '{:<15}'.format('Avg OT Losses')
         print("")
-        print head_str
+        print(head_str)
 
         for team in self.result:
             team_str = '{:<25}'.format(team)
@@ -140,7 +140,7 @@ class Simulation:
                     team_str += '{:<20}'.format(str(quantity)+"%")
                 else:
                     team_str += '{:<15}'.format(str(quantity))
-            print team_str
+            print(team_str)
 
     def print_sim_result_sorted(self):
         # This shouldn't be hardcoded, figure out how to fix it later
@@ -163,7 +163,7 @@ class Simulation:
         print("\nEAST\n")
         print(head_str)
         print("-------------------------------------------------------------------------------------------------------")
-        for i in xrange(len(east_sorted)):
+        for i in range(len(east_sorted)):
             team_str = '{:<25}'.format(east_sorted[i][0])
             for var_key in var_order:
                 quantity = east_sorted[i][1][var_key]/self.iterations
@@ -172,12 +172,12 @@ class Simulation:
                     team_str += '{:<20}'.format(str(quantity)+"%")
                 else:
                     team_str += '{:<15}'.format(str(quantity))
-            print team_str
+            print(team_str)
 
         print("\nWEST\n")
         print(head_str)
         print("-------------------------------------------------------------------------------------------------------")
-        for i in xrange(len(west_sorted)):
+        for i in range(len(west_sorted)):
             team_str = '{:<25}'.format(west_sorted[i][0])
             for var_key in var_order:
                 quantity = west_sorted[i][1][var_key] / self.iterations
@@ -186,7 +186,7 @@ class Simulation:
                     team_str += '{:<20}'.format(str(quantity) + "%")
                 else:
                     team_str += '{:<15}'.format(str(quantity))
-            print team_str
+            print(team_str)
 
     @staticmethod
     def read_teams_file(path):

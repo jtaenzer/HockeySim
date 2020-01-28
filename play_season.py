@@ -18,7 +18,7 @@ class PlaySeason:
     #  Doing this in a simple way will be susceptible to fluctuations, how to avoid that? Cap the weight at some value?
     # -There should be a better way to do the entries to the standings dictionary...
     def play_games_simple(self, allow_ot=True):
-        for i in xrange(len(self.game_record)):
+        for i in range(len(self.game_record)):
             if i < self.start:
                 continue
             sched_key = "game"+str(i)
@@ -33,7 +33,7 @@ class PlaySeason:
     # Teams with greater point % are more likely to win
     # This first attempt is likely to be unstable...
     def play_games_weighted(self, allow_ot=True):
-        for i in xrange(len(self.game_record)):
+        for i in range(len(self.game_record)):
             if i < self.start:
                 continue
             sched_key = "game"+str(i)
@@ -46,7 +46,7 @@ class PlaySeason:
             self.update_standings(game, winner, ot)
 
     def get_weight(self, game):
-        print "get_weights should not be called in the base class.\n"
+        print("get_weights should not be called in the base class.\n")
 
     def get_winner_weighted(self, game, weight):
         if weight < 0 or weight > 100:
@@ -63,23 +63,23 @@ class PlaySeason:
 
     # This method should contain league specific rules so it isn't implemented here in the base class
     def update_standings(self, game, winner, ot=""):
-        print "update_standings should not be called from the base class.\n"
+        print("update_standings should not be called from the base class.\n")
 
     # This method should contain league specific rules so it isn't implemented here in the base class
     def update_result(self, result):
-        print "update_result should not be called from the base class.\n"
+        print("update_result should not be called from the base class.\n")
 
     # This method should contain league specific rules so it isn't implemented here in the base class
     def determine_playoffs(self):
-        print "determine_playoffs should not be called from the base class.\n"
+        print("determine_playoffs should not be called from the base class.\n")
 
     # This method should contain league specific rules so it isn't implemented here in the base class
     def chk_tiebreaks(self, standings_sorted):
-        print "chk_tiebreaks should not be called from the base class.\n"
+        print("chk_tiebreaks should not be called from the base class.\n")
 
     # This method should change depending on league specific rules so it isn't implemented here in the base class
     def chk_head_to_head(self, team1, team2):
-        print "chk_head_to_head should not be called from the pass class.\n"
+        print("chk_head_to_head should not be called from the pass class.\n")
 
     # This method will always return an empty string (regulation win) and should be re-implemented in daughter classes
     @staticmethod
@@ -89,32 +89,32 @@ class PlaySeason:
     # This method will depend on league specific information so it isn't implemented here in the base class
     @staticmethod
     def sort_standings_by_division(standings):
-        print "sort_standings_by_division should not be called from the base class.\n"
+        print("sort_standings_by_division should not be called from the base class.\n")
 
     # This method will depend on league specific information so it isn't implemented here in the base class
     @staticmethod
     def print_standings_sorted(standings, output_format="league"):
-        print "print_standings_sorted should not be called from the base class.\n"
+        print("print_standings_sorted should not be called from the base class.\n")
 
     # Format of the standings may change from league to league so this is not implemented in the base class
     @staticmethod
     def print_standings_tuple(tup):
-        print "print_standings_sorted should not be called from the base class.\n"
+        print("print_standings_sorted should not be called from the base class.\n")
 
     # Format of the standings may change from league to league so this is not implemented in the base class
     @staticmethod
     def generate_initial_standings(teams):
-        print "generate_initial_standings should not be called from the base class.\n"
+        print("generate_initial_standings should not be called from the base class.\n")
 
     # Format of the standings may change from league to league so this is not implemented in the base class
     @staticmethod
     def generate_standings_from_game_record(teams, game_record, end=None):
-        print "generate_standings_from_game_record should not be called from the base class.\n"
+        print("generate_standings_from_game_record should not be called from the base class.\n")
 
     # Format of the result may change from league to league so this is not implemented in the base class
     @staticmethod
     def prep_sim_result(teams):
-        print "prep_sim_result should not be called from the base class.\n"
+        print("prep_sim_result should not be called from the base class.\n")
 
     # Utility function to sort standings by points
     # This will probably be replaced in the child classes to be better determine tiebreaks

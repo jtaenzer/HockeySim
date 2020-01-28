@@ -148,7 +148,7 @@ class ScheduleMaker:
 
     @staticmethod
     def find_first_unplayed_game(schedule):
-        for i in xrange(len(schedule)):
+        for i in range(len(schedule)):
             game = "game"+str(i)
             if not schedule[game]["visitor_goals"] and not schedule[game]["home_goals"]:
                 return i
@@ -163,7 +163,7 @@ class ScheduleMaker:
             print("find_game_number_by_date was passsed a non datetime.datetime object, returning 0")
             return 0
 
-        for i in xrange(len(schedule)):
+        for i in range(len(schedule)):
             game = "game"+str(i)
             game_date = datetime.datetime.strptime(schedule[game]["date"], '%Y-%m-%d')
             if game_date > date:

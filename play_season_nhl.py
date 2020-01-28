@@ -86,7 +86,7 @@ class PlaySeasonNHL(PlaySeason):
 
         # Find the top self.div_cutoff (3) teams in each division and add them to playoff_team_list
         # Pop those same teams from east and west so we can use east and west to determine the wildcard spots
-        for i in xrange(self.div_cutoff):
+        for i in range(self.div_cutoff):
             playoff_team_list.append(atlantic_sorted[i][0])
             playoff_team_list.append(metro_sorted[i][0])
             playoff_team_list.append(central_sorted[i][0])
@@ -99,7 +99,7 @@ class PlaySeasonNHL(PlaySeason):
         east_sorted = self.chk_tiebreaks(self.sort_by_points_row(east))
         west_sorted = self.chk_tiebreaks(self.sort_by_points_row(west))
 
-        for i in xrange(self.wc_cutoff):
+        for i in range(self.wc_cutoff):
             playoff_team_list.append(east_sorted[i][0])
             playoff_team_list.append(west_sorted[i][0])
 
@@ -109,8 +109,8 @@ class PlaySeasonNHL(PlaySeason):
     # For now only the head-to-head record is checked
     def chk_tiebreaks(self, standings_sorted):
         checkedpairs = []
-        for i in xrange(len(standings_sorted)):
-            for j in xrange(len(standings_sorted)):
+        for i in range(len(standings_sorted)):
+            for j in range(len(standings_sorted)):
                 if i == j:
                     continue
                 if [i, j] in checkedpairs or [j, i] in checkedpairs:
@@ -149,13 +149,13 @@ class PlaySeasonNHL(PlaySeason):
         if len(head_to_head) % 2 != 0:
             count = {team1: 0, team2: 0}
             head_to_head_sorted = sorted(head_to_head.items(), key=lambda kv: kv[1]['date'])
-            for i in xrange(len(head_to_head_sorted)):
+            for i in range(len(head_to_head_sorted)):
                 count[head_to_head_sorted[i][1]["home"]] += 1
             if count[team1] > count[team2]:
                 pop_team = team1
             else:
                 pop_team = team2
-            for i in xrange(len(head_to_head_sorted)):
+            for i in range(len(head_to_head_sorted)):
                 if count[head_to_head_sorted[i][1]["home"]] == pop_team:
                     head_to_head.pop(head_to_head_sorted[i][0])
 
@@ -218,12 +218,12 @@ class PlaySeasonNHL(PlaySeason):
     @staticmethod
     def print_standings_sorted(teams, standings, output_format="wildcard"):
 
-        print '{:<25}'.format('Team'), \
-              '{:<10}'.format('Wins'), \
-              '{:<10}'.format('Losses'), \
-              '{:<10}'.format('OT Losses'), \
-              '{:<10}'.format('Points'), \
-              '{:<10}'.format('ROW')
+        print('{:<25}'.format('Team'),
+              '{:<10}'.format('Wins'),
+              '{:<10}'.format('Losses'),
+              '{:<10}'.format('OT Losses'),
+              '{:<10}'.format('Points'),
+              '{:<10}'.format('ROW'))
 
         if output_format == "league":
             standings_sorted = PlaySeasonNHL.sort_by_points_row(standings)
@@ -268,7 +268,7 @@ class PlaySeasonNHL(PlaySeason):
             metro_top = dict()
             central_top = dict()
             pacific_top = dict()
-            for i in xrange(div_cutoff):
+            for i in range(div_cutoff):
                 atlantic_top[atlantic_sorted[i][0]] = atlantic_sorted[i][1]
                 metro_top[metro_sorted[i][0]] = metro_sorted[i][1]
                 east.pop(atlantic_sorted[i][0])
@@ -283,7 +283,7 @@ class PlaySeasonNHL(PlaySeason):
 
             east_wc = dict()
             west_wc = dict()
-            for i in xrange(wc_cutoff):
+            for i in range(wc_cutoff):
                 east_wc[east_sorted[i][0]] = east_sorted[i][1]
                 east.pop(east_sorted[i][0])
                 west_wc[west_sorted[i][0]] = west_sorted[i][1]
@@ -322,13 +322,13 @@ class PlaySeasonNHL(PlaySeason):
 
     @staticmethod
     def print_standings_tuple(standings_tup):
-        for team in xrange(len(standings_tup)):
-            print '{:<25}'.format(standings_tup[team][0]), \
-                  '{:<10}'.format(standings_tup[team][1]["wins"]), \
-                  '{:<10}'.format(standings_tup[team][1]["losses"]), \
-                  '{:<10}'.format(standings_tup[team][1]["OTlosses"]), \
-                  '{:<10}'.format(standings_tup[team][1]["points"]), \
-                  '{:<10}'.format(standings_tup[team][1]["ROW"])
+        for team in range(len(standings_tup)):
+            print('{:<25}'.format(standings_tup[team][0]),
+                  '{:<10}'.format(standings_tup[team][1]["wins"]),
+                  '{:<10}'.format(standings_tup[team][1]["losses"]),
+                  '{:<10}'.format(standings_tup[team][1]["OTlosses"]),
+                  '{:<10}'.format(standings_tup[team][1]["points"]),
+                  '{:<10}'.format(standings_tup[team][1]["ROW"]))
 
     @staticmethod
     # Create a dictionary to hold wins, losses, OT losses for each team
@@ -342,7 +342,7 @@ class PlaySeasonNHL(PlaySeason):
     def generate_standings_from_game_record(teams, game_record, end=None):
         standings = PlaySeasonNHL.generate_initial_standings(teams)
 
-        for i in xrange(len(game_record)):
+        for i in range(len(game_record)):
             game_key = "game"+str(i)
             if end is not None and i >= end:
                 continue
