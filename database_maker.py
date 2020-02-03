@@ -1,7 +1,7 @@
 import sys
 import mysql.connector
 
-class database_maker:
+class DatabaseMakerMySQL:
 
     def __init__(self, host, user, passwd, database_name=None):
         self.host = host
@@ -72,6 +72,7 @@ class database_maker:
     # This functionality exists in pandas already and is probably done better there, could be deprecated?
     # Some issues:
     # No protection against non-csv files
+    # Assumes either all columns will be used or any columns to be dropped are at the end of each row
     # Assumes there is no column of row numbers in the csv file
     # Assumes first row is column names
     def insert_from_csv(self, table_name, file_path, col_names=""):
@@ -91,9 +92,9 @@ class database_maker:
                 sql_str = sql_str + " (" + col_names + ") VALUES (" + ("%s, " * num_columns)[:-2] + ")"
                 continue
             line = line.replace("\n", "")
-            values = line.strip(",").split(",")  # Is the .strip even necessary here?
+            values = line.split(",")
             values.insert(0, cnt)  # Insert row number into values at the front
-            table_list.append(values[:num_columns])
+            table_list.append(values[:num_columns])  # Strip unused columns at the end
         self.cursor.executemany(sql_str, table_list)
         self.db.commit()
         print(self.cursor.rowcount, "record inserted.")
