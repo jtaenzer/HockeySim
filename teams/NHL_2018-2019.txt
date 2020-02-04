@@ -24,7 +24,7 @@ Chicago Blackhawks,central,western
 Colorado Avalanche,central,western
 Calgary Flames,pacific,western
 San Jose Sharks,pacific,western
-Las Vegas Golden Knights,pacific,western
+Vegas Golden Knights,pacific,western
 Arizona Coyotes,pacific,western
 Edmonton Oilers,pacific,western
 Vancouver Canucks,pacific,western
