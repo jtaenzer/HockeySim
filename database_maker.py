@@ -1,5 +1,9 @@
 import sys
 import mysql.connector
+import requests
+import pandas as pd
+from bs4 import BeautifulSoup
+
 
 class DatabaseMakerMySQL:
 
@@ -51,23 +55,30 @@ class DatabaseMakerMySQL:
     # Create a new database
     def db_create(self, database_name):
         try:
-            self.cursor.execute("CREATE DATABASE " + database_name)
+            self.cursor.execute("CREATE DATABASE %s" % database_name)
         except mysql.connector.errors.DatabaseError as err:
-            print(database_name + " DB already exists,", err)
+            print(err)
+
+    # Drop a database USE WITH CAUTION
+    def db_drop(self, database_name):
+        try:
+            self.cursor.execute("DROP DATABASE IF EXISTS %s" % database_name)
+        except mysql.connector.errors.ProgrammingError as err:
+            print(err)
 
     # Create a new table
     def table_create(self, table_name, columns_str):
         try:
             self.cursor.execute("CREATE TABLE " + table_name + " " + columns_str)
         except mysql.connector.errors.ProgrammingError as err:
-            print("hockeydatabase.nhl_teams table may already exist,", err)
+            print(err)
 
     # Drop a table
     def table_drop(self, table_name):
         try:
-            self.cursor.execute("DROP TABLE " + table_name)
+            self.cursor.execute("DROP TABLE IF EXISTS %s" % table_name)
         except mysql.connector.errors.ProgrammingError as err:
-            print("Couldn't drop table " + table_name, err)
+            print(err)
 
     # This functionality exists in pandas already and is probably done better there, could be deprecated?
     # Some issues:
@@ -99,8 +110,83 @@ class DatabaseMakerMySQL:
         self.db.commit()
         print(self.cursor.rowcount, "record inserted.")
 
+    def insert_from_urls(self, table_name="", attributes=pd.DataFrame(), urls=[], tag="", tag_attrs={}):
+        if not table_name:
+            print("database_maker.insert_from_url: No table name provided, can't insert.")
+            sys.exit(2)
+        if len(urls) < 1:
+            print("database_maker.insert_from_url: No URLs provided, can't insert.")
+            sys.exit(2)
+        if not tag:
+            print("database_maker.insert_from_url: No HTML tag provided for findAll, can't insert.")
+            sys.exit(2)
+        if len(attributes) < 1:
+            print("database_maker.insert_from_url: No table attributes provided, can't insert.")
+            sys.exit(2)
+
+        sql_str = "INSERT IGNORE INTO %s (%s) VALUES (%s)" \
+                  % (table_name, ", ".join(attributes['attr']), ("%s"*len(attributes['attr'])).replace("s%", "s, %"))
+
+        for url in urls:
+            try:
+                page = requests.get(url)
+            except requests.exceptions.MissingSchema as err:
+                print("database_maker.insert_from_url: %s" % err)
+                sys.exit(2)
+            soup = BeautifulSoup(page.content, "html.parser")
+            insert_list = []
+            for line_index, line in enumerate(soup.findAll(tag, attrs=tag_attrs)):
+                missing_val = False
+                val_list = []
+                for row_index, row in attributes.iterrows():
+                    attr = row['attr']
+                    children = line.findChildren(row['tag'], attrs={'data-stat': attr})
+                    if len(children) == 0:
+                        missing_val = True
+                    elif len(children) > 1:
+                        print("database_maker.insert_from_url: "
+                              "Ambiguous attribute (%s) found multiple children on page (%s), exiting." % (attr, url))
+                        sys.exit(2)
+                    else:
+                        val_list.append(children[0].text)
+                if missing_val:
+                    continue
+                insert_list.append(tuple(val_list))
+            self.cursor.executemany(sql_str, insert_list)
+            self.db.commit()
+            print("Inserted %s rows into %s" % (str(self.cursor.rowcount), table_name))
+
+    # Merge a list of tables provided in table_list into another table (mod_table)
+    # Use new=True if mod_table doesn't already exist
+    # Currently no protection against attempting to merge tables with inconsistent columns
+    def merge_tables(self, mod_table, table_list, selection="*", new=False):
+        if new:
+            self.cursor.execute("CREATE TABLE %s AS SELECT %s FROM %s" % (mod_table, selection, table_list[0]))
+            self.db.commit()
+            print("Inserted %s rows into %s" % (str(self.cursor.rowcount), mod_table))
+            table_list.pop(0)
+        for table in table_list:
+            self.cursor.execute("INSERT IGNORE INTO %s SELECT %s FROM %s" % (mod_table, selection, table))
+            self.db.commit()
+            print("Inserted %s rows into %s" % (str(self.cursor.rowcount), mod_table))
+
     # Print rows for debugging
-    def table_rows(self, table_name):
-        self.cursor.execute("SELECT * FROM " + table_name)
+    def table_rows(self, table_name, order_by=""):
+        sql_str = "SELECT * FROM " + table_name
+        if order_by:
+            sql_str = sql_str + " ORDER BY " + order_by
+        self.cursor.execute(sql_str)
         for row in self.cursor.fetchall():
             print(row)
+
+    def table_length(self, table_name):
+        sql_str = "SELECT * FROM " + table_name
+        self.cursor.execute(sql_str)
+        print("%s contains %s rows." % (table_name, len(self.cursor.fetchall())))
+
+    @staticmethod
+    def table_str_from_df(attributes=pd.DataFrame()):
+        table_str = "("
+        for index, row in attributes.iterrows():
+            table_str += row['attr'] + " " + row['type'] + ", "
+        return table_str[:-2] + ")"
