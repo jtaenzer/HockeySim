@@ -116,11 +116,12 @@ def main():
             table_name = "nhl_gamelog_%s" % team
             gamelog_urls = []
             for year in dbcfg.years:
+                team_url = team
                 if team == "ARI" and int(year) < 2015:
-                    team = "PHX"
+                    team_url = "PHX"
                 if team == "WPG" and int(year) < 2012:
-                    team = "ATL"
-                gamelog_urls.append("https://www.hockey-reference.com/teams/%s/%s_gamelog.html" % (team, year))
+                    team_url = "ATL"
+                gamelog_urls.append("https://www.hockey-reference.com/teams/%s/%s_gamelog.html" % (team_url, year))
             if dbcfg.remake_gamelog_tables:
                 db.table_drop(table_name)
                 db.table_create(table_name, table_str)
