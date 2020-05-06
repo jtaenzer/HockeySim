@@ -5,6 +5,7 @@ import pandas as pd
 from bs4 import BeautifulSoup
 
 
+# This class now contains some NHL specific methods, at some point these should be split into a daughter class
 class DatabaseMakerMySQL:
 
     def __init__(self, host, user, passwd, database_name=None):
@@ -79,6 +80,28 @@ class DatabaseMakerMySQL:
             self.cursor.execute("DROP TABLE IF EXISTS %s" % table_name)
         except mysql.connector.errors.ProgrammingError as err:
             print(err)
+
+    # Check if a table exists
+    def table_exists(self, table_name):
+        self.cursor.execute("SHOW TABLES LIKE '%s'" % table_name)
+        # This will return 'None' if the table doesn't exist
+        if self.cursor.fetchone():
+            return True
+        return False
+
+    # Print rows for debugging
+    def table_rows(self, table_name, order_by=""):
+        sql_str = "SELECT * FROM " + table_name
+        if order_by:
+            sql_str = sql_str + " ORDER BY " + order_by
+        self.cursor.execute(sql_str)
+        for row in self.cursor.fetchall():
+            print(row)
+
+    def table_length(self, table_name):
+        sql_str = "SELECT * FROM " + table_name
+        self.cursor.execute(sql_str)
+        print("%s contains %s rows." % (table_name, len(self.cursor.fetchall())))
 
     # This functionality exists in pandas already and is probably done better there, could be deprecated?
     # Some issues:
@@ -156,36 +179,6 @@ class DatabaseMakerMySQL:
             self.db.commit()
             print("Inserted %s rows into %s" % (str(self.cursor.rowcount), table_name))
 
-    # This method is a hack to get the NHL conference/division structure year by year
-    # Ideally should be replaced something more general
-    def insert_league_structure_table(self, table_name, attributes, year, teams_dict, url, tag="table", tag_attrs={}):
-        try:
-            page = requests.get(url)
-        except requests.exceptions.MissingSchema as err:
-            print("database_maker.insert_league_structure_table: %s" % err)
-            sys.exit(2)
-        soup = BeautifulSoup(page.content, "html.parser")
-        sql_str = "INSERT IGNORE INTO %s (%s) VALUES (%s)" \
-                  % (table_name, ", ".join(attributes['attr']), ("%s"*len(attributes['attr'])).replace("s%", "s, %"))
-        insert_list = []
-        for line_index, line in enumerate(soup.findAll(tag, attrs=tag_attrs)):
-            for div_index, div in enumerate(line.findChildren("tr")):
-                val_list = []
-                if 'class' in div.attrs.keys() and 'thead' in div.attrs['class']:
-                    division = div.text.split(" ")[0].lower()
-                for team_index, team in enumerate(div.findChildren("th", attrs={'data-stat': 'team_name'})):
-                    if team.text:
-                        # Remove special characters (mostly the * used to indicate a team made the playoffs)
-                        import re
-                        team_clean = re.sub('[^a-zA-Z0-9 \n\.]', '', team.text)
-                        val_list.extend([team_clean, teams_dict[team_clean], division, "conf"])
-                if len(val_list) > 0:
-                    insert_list.append(val_list)
-        self.cursor.executemany(sql_str, insert_list)
-        self.db.commit()
-        print("Inserted %s rows into %s" % (str(self.cursor.rowcount), table_name))
-
-
     # Merge a list of tables provided in table_list into another table (mod_table)
     # Use new=True if mod_table doesn't already exist
     # Currently no protection against attempting to merge tables with inconsistent columns
@@ -200,23 +193,44 @@ class DatabaseMakerMySQL:
             self.db.commit()
             print("Inserted %s rows into %s" % (str(self.cursor.rowcount), mod_table))
 
-    # Print rows for debugging
-    def table_rows(self, table_name, order_by=""):
-        sql_str = "SELECT * FROM " + table_name
-        if order_by:
-            sql_str = sql_str + " ORDER BY " + order_by
-        self.cursor.execute(sql_str)
-        for row in self.cursor.fetchall():
-            print(row)
-
-    def table_length(self, table_name):
-        sql_str = "SELECT * FROM " + table_name
-        self.cursor.execute(sql_str)
-        print("%s contains %s rows." % (table_name, len(self.cursor.fetchall())))
-
     @staticmethod
     def table_str_from_df(attributes=pd.DataFrame()):
         table_str = "("
         for index, row in attributes.iterrows():
             table_str += row['attr'] + " " + row['type'] + ", "
         return table_str[:-2] + ")"
+
+    # This method is a hack to get the NHL conference/division structure year by year
+    # Ideally should be replaced something more general
+    def insert_league_structure_table(self, table_name, attributes, teams_dict, url, tag="table", tag_attrs={}):
+        try:
+            page = requests.get(url)
+        except requests.exceptions.MissingSchema as err:
+            print("database_maker.insert_league_structure_table: %s" % err)
+            sys.exit(2)
+        soup = BeautifulSoup(page.content, "html.parser")
+        sql_str = "INSERT IGNORE INTO %s (%s) VALUES (%s)" \
+                  % (table_name, ", ".join(attributes['attr']), ("%s"*len(attributes['attr'])).replace("s%", "s, %"))
+        insert_list = []
+        for line_index, line in enumerate(soup.findAll(tag, attrs=tag_attrs)):
+            for div_index, div in enumerate(line.findChildren("tr")):
+                val_list = []
+                division = ""
+                if 'class' in div.attrs.keys() and 'thead' in div.attrs['class']:
+                    division = div.text.split(" ")[0].lower()
+                for team_index, team in enumerate(div.findChildren("th", attrs={'data-stat': 'team_name'})):
+                    if team.text:
+                        # Remove special characters (mostly the * used to indicate a team made the playoffs)
+                        import re
+                        team_clean = re.sub('[^a-zA-Z0-9 \n\.]', '', team.text)
+                        if not division:
+                            print("database_maker.insert_league_structure_table: "
+                                  "Division not found for team %s in table %s, something went wrong"
+                                  % (team_clean, table_name))
+                            sys.exit(2)
+                        val_list.extend([team_clean, teams_dict[team_clean], division, "conf"])
+                if len(val_list) > 0:
+                    insert_list.append(val_list)
+        self.cursor.executemany(sql_str, insert_list)
+        self.db.commit()
+        print("Inserted %s rows into %s" % (str(self.cursor.rowcount), table_name))
