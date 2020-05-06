@@ -67,6 +67,30 @@ def main():
         db.db_create(database_name)
     db = DatabaseMakerMySQL(host, user, passwd, database_name)
 
+    if dbcfg.remake_league_structure_tables:
+        table_name = "nhl_structure"
+        structure_attrs = pd.DataFrame(dbcfg.structure_attrs, columns=['attr', 'tag', 'type'])
+        table_str = db.table_str_from_df(structure_attrs)
+        for year in dbcfg.years:
+            structure_url = "https://www.hockey-reference.com/leagues/NHL_%s.html" % year
+            db.table_drop(table_name + "_%s" % year)
+            db.table_create(table_name + "_%s" % year, table_str)
+            db.insert_league_structure_table(table_name + "_%s" % year, structure_attrs, year, dbcfg.teams,
+                                             structure_url, tag="table",
+                                             tag_attrs={"id": ["standings_EAS", "standings_WES"]})
+            db.cursor.execute("SELECT long_name, division FROM nhl_structure_%s" % year)
+            for row in db.cursor.fetchall():
+                long_name = row[0]
+                division = row[1]
+                if division in dbcfg.eastern_conf:
+                    db.cursor.execute("UPDATE nhl_structure_%s SET conference = '%s' WHERE long_name = '%s'"
+                                      % (year, "eastern", long_name))
+                elif division in dbcfg.western_conf:
+                    db.cursor.execute("UPDATE nhl_structure_%s SET conference = '%s' WHERE long_name = '%s'"
+                                      % (year, "western", long_name))
+
+
+
     if dbcfg.remake_schedule_tables:
         table_name = "nhl_schedule"
         schedule_attrs = pd.DataFrame(dbcfg.schedule_attrs, columns=['attr', 'tag', 'type'])
@@ -103,7 +127,6 @@ def main():
             db.table_create(table_name, table_str)
             db.insert_from_urls(table_name, gamelog_attrs, gamelog_urls, tag='tr',
                                 tag_attrs={'id': [lambda x: x.startswith('tm_gamelog_')]})
-
 
 if __name__ == "__main__":
     main()
