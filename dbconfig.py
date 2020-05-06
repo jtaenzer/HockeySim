@@ -1,12 +1,19 @@
 remake_db = False
+remake_league_structure_tables = False
 remake_schedule_tables = False
 fill_gamelog_tables = False
 remake_gamelog_tables = False
 
 years = ['2009', '2010', '2011', '2012', '2013', '2014', '2015', '2016', '2017', '2018', '2019', '2020']
 
+
 teams = ['PIT', 'WSH', 'PHI', 'CAR', 'NYI', 'CBJ', 'NYR', 'NJD', 'BOS', 'TBL', 'TOR', 'FLA', 'BUF', 'MTL', 'OTT', 'DET',
          'STL', 'DAL', 'COL', 'WPG', 'NSH', 'MIN', 'CHI', 'EDM', 'VEG', 'VAN', 'CGY', 'ARI', 'SJS', 'ANA', 'LAK']
+
+structure_attrs = [['long_name', '', 'VARCHAR (255) PRIMARY KEY'],
+                   ['short_name', '', 'VARCHAR (255)'],
+                   ['division', '', 'VARCHAR (255)'],
+                   ['conference', '', 'VARCHAR (255)']]
 
 schedule_attrs = [['date_game', 'th', 'DATE'],
                   ['visitor_team_name', 'td', 'VARCHAR (255)'],
@@ -40,7 +47,6 @@ gamelog_attrs = [['date_game', 'td', 'DATE PRIMARY KEY'],
                  ['zs_offense_pct', 'td', 'FLOAT'],
                  ['pdo', 'td', 'FLOAT']]
 
-"""
 teams = {'Tampa Bay Lightning': 'TBL',
          'Boston Bruins': 'BOS',
          'Toronto Maple Leafs': 'TOR',
@@ -75,4 +81,6 @@ teams = {'Tampa Bay Lightning': 'TBL',
          'Vancouver Canucks': 'VAN',
          'Anaheim Ducks': 'ANA',
          'Los Angeles Kings': 'LAK'}
-"""
+
+eastern_conf = ["atlantic", "metropolitan", "northeast", "southeast"]
+western_conf = ["central", "pacific", "northwest"]
