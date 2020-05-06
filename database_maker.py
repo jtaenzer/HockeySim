@@ -156,6 +156,36 @@ class DatabaseMakerMySQL:
             self.db.commit()
             print("Inserted %s rows into %s" % (str(self.cursor.rowcount), table_name))
 
+    # This method is a hack to get the NHL conference/division structure year by year
+    # Ideally should be replaced something more general
+    def insert_league_structure_table(self, table_name, attributes, year, teams_dict, url, tag="table", tag_attrs={}):
+        try:
+            page = requests.get(url)
+        except requests.exceptions.MissingSchema as err:
+            print("database_maker.insert_league_structure_table: %s" % err)
+            sys.exit(2)
+        soup = BeautifulSoup(page.content, "html.parser")
+        sql_str = "INSERT IGNORE INTO %s (%s) VALUES (%s)" \
+                  % (table_name, ", ".join(attributes['attr']), ("%s"*len(attributes['attr'])).replace("s%", "s, %"))
+        insert_list = []
+        for line_index, line in enumerate(soup.findAll(tag, attrs=tag_attrs)):
+            for div_index, div in enumerate(line.findChildren("tr")):
+                val_list = []
+                if 'class' in div.attrs.keys() and 'thead' in div.attrs['class']:
+                    division = div.text.split(" ")[0].lower()
+                for team_index, team in enumerate(div.findChildren("th", attrs={'data-stat': 'team_name'})):
+                    if team.text:
+                        # Remove special characters (mostly the * used to indicate a team made the playoffs)
+                        import re
+                        team_clean = re.sub('[^a-zA-Z0-9 \n\.]', '', team.text)
+                        val_list.extend([team_clean, teams_dict[team_clean], division, "conf"])
+                if len(val_list) > 0:
+                    insert_list.append(val_list)
+        self.cursor.executemany(sql_str, insert_list)
+        self.db.commit()
+        print("Inserted %s rows into %s" % (str(self.cursor.rowcount), table_name))
+
+
     # Merge a list of tables provided in table_list into another table (mod_table)
     # Use new=True if mod_table doesn't already exist
     # Currently no protection against attempting to merge tables with inconsistent columns
