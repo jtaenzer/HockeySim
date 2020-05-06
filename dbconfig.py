@@ -1,8 +1,8 @@
-remake_db = False
-remake_league_structure_tables = False
-remake_schedule_tables = False
-fill_gamelog_tables = False
-remake_gamelog_tables = False
+remake_db = True
+remake_league_structure_tables = True
+remake_schedule_tables = True
+fill_gamelog_tables = True
+remake_gamelog_tables = True
 
 years = ['2009', '2010', '2011', '2012', '2013', '2014', '2015', '2016', '2017', '2018', '2019', '2020']
 
