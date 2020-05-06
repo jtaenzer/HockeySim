@@ -1,8 +1,8 @@
-remake_db = False
-remake_league_structure_tables = False
-remake_schedule_tables = False
-fill_gamelog_tables = False
-remake_gamelog_tables = False
+remake_db = True
+remake_league_structure_tables = True
+remake_schedule_tables = True
+fill_gamelog_tables = True
+remake_gamelog_tables = True
 remake_sim_result_table = True
 remake_season_result_tables = True
 
@@ -32,7 +32,7 @@ gamelog_attrs = [['date_game', 'td', 'DATE PRIMARY KEY'],
                  ['opp_name', 'td', 'VARCHAR(255)'],
                  ['goals', 'td', 'INT'],
                  ['opp_goals', 'td', 'INT'],
-                 ['game_outcome', 'td', 'INT'],
+                 ['game_outcome', 'td', 'VARCHAR(255)'],
                  ['overtimes', 'td', 'VARCHAR(255)'],
                  ['shots', 'td', 'INT'],
                  ['pen_min', 'td', 'INT'],
@@ -56,40 +56,40 @@ gamelog_attrs = [['date_game', 'td', 'DATE PRIMARY KEY'],
                  ['zs_offense_pct', 'td', 'FLOAT'],
                  ['pdo', 'td', 'FLOAT']]
 
-teams = {'Tampa Bay Lightning': 'TBL',
-         'Boston Bruins': 'BOS',
-         'Toronto Maple Leafs': 'TOR',
-         'Montreal Canadiens': 'MTL',
-         'Florida Panthers': 'FLA',
-         'Buffalo Sabres': 'BUF',
-         'Detroit Red Wings': 'DET',
-         'Ottawa Senators': 'OTT',
-         'Washington Capitals': 'WSH',
-         'New York Islanders': 'NYI',
-         'Pittsburgh Penguins': 'PIT',
-         'Carolina Hurricanes': 'CAR',
-         'Columbus Blue Jackets': 'CBJ',
-         'Philadelphia Flyers': 'PHI',
-         'New York Rangers': 'NYR',
-         'New Jersey Devils': 'NJD',
-         'Winnipeg Jets': 'WPG',
-         'Atlanta Thrashers': 'WPG',  # The Thrashers moved to Winnipeg at the start of the 2012 season
-         'Nashville Predators': 'NSH',
-         'St. Louis Blues': 'STL',
-         'Dallas Stars': 'DAL',
-         'Minnesota Wild': 'MIN',
-         'Chicago Blackhawks': 'CHI',
-         'Colorado Avalanche': 'COL',
-         'Calgary Flames': 'CGY',
-         'San Jose Sharks': 'SJS',
-         'Las Vegas Golden Knights': 'VEG',
-         'Vegas Golden Knights': 'VEG',  # Data is inconsistent about Las Vegas vs. Vegas
-         'Arizona Coyotes': 'ARI',
-         'Phoenix Coyotes': 'ARI',  # The Coyotes changed their name from Phoenix to Arizona in 2015
-         'Edmonton Oilers': 'EDM',
-         'Vancouver Canucks': 'VAN',
-         'Anaheim Ducks': 'ANA',
-         'Los Angeles Kings': 'LAK'}
+teams_dict = {'Tampa Bay Lightning': 'TBL',
+              'Boston Bruins': 'BOS',
+              'Toronto Maple Leafs': 'TOR',
+              'Montreal Canadiens': 'MTL',
+              'Florida Panthers': 'FLA',
+              'Buffalo Sabres': 'BUF',
+              'Detroit Red Wings': 'DET',
+              'Ottawa Senators': 'OTT',
+              'Washington Capitals': 'WSH',
+              'New York Islanders': 'NYI',
+              'Pittsburgh Penguins': 'PIT',
+              'Carolina Hurricanes': 'CAR',
+              'Columbus Blue Jackets': 'CBJ',
+              'Philadelphia Flyers': 'PHI',
+              'New York Rangers': 'NYR',
+              'New Jersey Devils': 'NJD',
+              'Winnipeg Jets': 'WPG',
+              'Atlanta Thrashers': 'WPG',  # The Thrashers moved to Winnipeg at the start of the 2012 season
+              'Nashville Predators': 'NSH',
+              'St. Louis Blues': 'STL',
+              'Dallas Stars': 'DAL',
+              'Minnesota Wild': 'MIN',
+              'Chicago Blackhawks': 'CHI',
+              'Colorado Avalanche': 'COL',
+              'Calgary Flames': 'CGY',
+              'San Jose Sharks': 'SJS',
+              'Las Vegas Golden Knights': 'VEG',
+              'Vegas Golden Knights': 'VEG',  # Data is inconsistent about Las Vegas vs. Vegas
+              'Arizona Coyotes': 'ARI',
+              'Phoenix Coyotes': 'ARI',  # The Coyotes changed their name from Phoenix to Arizona in 2015
+              'Edmonton Oilers': 'EDM',
+              'Vancouver Canucks': 'VAN',
+              'Anaheim Ducks': 'ANA',
+              'Los Angeles Kings': 'LAK'}
 
 eastern_conf = ["atlantic", "metropolitan", "northeast", "southeast"]
 western_conf = ["central", "pacific", "northwest"]
