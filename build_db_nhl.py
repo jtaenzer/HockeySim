@@ -76,7 +76,7 @@ def main():
             structure_url = "https://www.hockey-reference.com/leagues/NHL_%s.html" % year
             db.table_drop(table_name + "_%s" % year)
             db.table_create(table_name + "_%s" % year, table_str)
-            db.insert_league_structure_table(table_name + "_%s" % year, structure_attrs, dbcfg.teams,
+            db.insert_league_structure_table(table_name + "_%s" % year, structure_attrs, dbcfg.teams_dict,
                                              structure_url, tag="table",
                                              tag_attrs={"id": ["standings_EAS", "standings_WES"]})
             db.cursor.execute("SELECT long_name, division FROM nhl_structure_%s" % year)
@@ -141,6 +141,7 @@ def main():
             table_name = "nhl_season_result_%s" % year
             db.table_drop(table_name)
             db.table_create(table_name, table_str)
+
 
 if __name__ == "__main__":
     main()
