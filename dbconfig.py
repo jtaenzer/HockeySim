@@ -1,11 +1,20 @@
-remake_db = True
-remake_league_structure_tables = True
-remake_schedule_tables = True
-fill_gamelog_tables = True
-remake_gamelog_tables = True
+remake_db = False
+remake_league_structure_tables = False
+remake_schedule_tables = False
+fill_gamelog_tables = False
+remake_gamelog_tables = False
+remake_sim_result_table = True
+remake_season_result_tables = True
+
+sim_result_attrs = [['team_name', '', 'VARCHAR (255) PRIMARY KEY'],
+                    ['wins', '', 'INT'],
+                    ['losses', '', 'INT'],
+                    ['OTlosses', '', 'INT'],
+                    ['points', '', 'INT'],
+                    ['points_ROW', '', 'INT'],
+                    ['playoffs', '', 'INT']]
 
 years = ['2009', '2010', '2011', '2012', '2013', '2014', '2015', '2016', '2017', '2018', '2019', '2020']
-
 
 teams = ['PIT', 'WSH', 'PHI', 'CAR', 'NYI', 'CBJ', 'NYR', 'NJD', 'BOS', 'TBL', 'TOR', 'FLA', 'BUF', 'MTL', 'OTT', 'DET',
          'STL', 'DAL', 'COL', 'WPG', 'NSH', 'MIN', 'CHI', 'EDM', 'VEG', 'VAN', 'CGY', 'ARI', 'SJS', 'ANA', 'LAK']
