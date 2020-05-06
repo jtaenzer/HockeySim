@@ -6,7 +6,8 @@ import dbconfig as dbcfg
 from database_maker import DatabaseMakerMySQL
 from bs4 import BeautifulSoup
 
-
+# Finds the date the playoffs started for a particular season
+# Used to mark playoff games in the db
 def find_playoffs_start_date(url):
     page = requests.get(url)
     soup = BeautifulSoup(page.content, "html.parser")
@@ -88,8 +89,6 @@ def main():
                 elif division in dbcfg.western_conf:
                     db.cursor.execute("UPDATE nhl_structure_%s SET conference = '%s' WHERE long_name = '%s'"
                                       % (year, "western", long_name))
-
-
 
     if dbcfg.remake_schedule_tables:
         table_name = "nhl_schedule"
