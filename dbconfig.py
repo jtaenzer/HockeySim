@@ -6,14 +6,6 @@ remake_gamelog_tables = True
 remake_sim_result_table = True
 remake_season_result_tables = True
 
-sim_result_attrs = [['team_name', '', 'VARCHAR (255) PRIMARY KEY'],
-                    ['wins', '', 'INT'],
-                    ['losses', '', 'INT'],
-                    ['OTlosses', '', 'INT'],
-                    ['points', '', 'INT'],
-                    ['points_ROW', '', 'INT'],
-                    ['playoffs', '', 'INT']]
-
 years = ['2009', '2010', '2011', '2012', '2013', '2014', '2015', '2016', '2017', '2018', '2019', '2020']
 
 teams = ['PIT', 'WSH', 'PHI', 'CAR', 'NYI', 'CBJ', 'NYR', 'NJD', 'BOS', 'TBL', 'TOR', 'FLA', 'BUF', 'MTL', 'OTT', 'DET',
@@ -26,7 +18,10 @@ structure_attrs = [['long_name', '', 'VARCHAR (255) PRIMARY KEY'],
 
 schedule_attrs = [['date_game', 'th', 'DATE'],
                   ['visitor_team_name', 'td', 'VARCHAR (255)'],
-                  ['home_team_name', 'td', 'VARCHAR (255)']]
+                  ['visitor_goals', 'td', 'INT'],
+                  ['home_team_name', 'td', 'VARCHAR (255)'],
+                  ['home_goals', 'td', 'INT'],
+                  ['overtimes', 'td', 'VARCHAR (255)']]
 
 gamelog_attrs = [['date_game', 'td', 'DATE PRIMARY KEY'],
                  ['opp_name', 'td', 'VARCHAR(255)'],
@@ -55,6 +50,14 @@ gamelog_attrs = [['date_game', 'td', 'DATE PRIMARY KEY'],
                  ['faceoff_percentage', 'td', 'FLOAT'],
                  ['zs_offense_pct', 'td', 'FLOAT'],
                  ['pdo', 'td', 'FLOAT']]
+
+sim_result_attrs = [['team_name', '', 'VARCHAR (255) PRIMARY KEY'],
+                    ['wins', '', 'INT'],
+                    ['losses', '', 'INT'],
+                    ['OTlosses', '', 'INT'],
+                    ['points', '', 'INT'],
+                    ['points_ROW', '', 'INT'],
+                    ['playoffs', '', 'INT']]
 
 teams_dict = {'Tampa Bay Lightning': 'TBL',
               'Boston Bruins': 'BOS',
