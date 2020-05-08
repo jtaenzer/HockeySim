@@ -213,11 +213,12 @@ class DatabaseMakerMySQL:
                   % (table_name, ", ".join(attributes['attr']), ("%s"*len(attributes['attr'])).replace("s%", "s, %"))
         insert_list = []
         for line_index, line in enumerate(soup.findAll(tag, attrs=tag_attrs)):
+            division = ""
             for div_index, div in enumerate(line.findChildren("tr")):
                 val_list = []
-                division = ""
                 if 'class' in div.attrs.keys() and 'thead' in div.attrs['class']:
                     division = div.text.split(" ")[0].lower()
+                print(div_index, division)
                 for team_index, team in enumerate(div.findChildren("th", attrs={'data-stat': 'team_name'})):
                     if team.text:
                         # Remove special characters (mostly the * used to indicate a team made the playoffs)
