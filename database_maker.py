@@ -22,7 +22,7 @@ class DatabaseMakerMySQL:
             self.db = self.db_connect()
 
         if self.db:
-            self.cursor = self.db.cursor()
+            self.cursor = self.db.cursor(buffered=True)
 
     # Connect to mySQL without a database, called from init if no database name is provided
     def mysql_connect(self):
