@@ -103,6 +103,12 @@ def main():
             playoff_start_date = find_playoffs_start_date(schedule_urls[-1])
             if not playoff_start_date:
                 playoff_start_date = "2100-01-01"
+            db.cursor.execute("ALTER TABLE %s_%s ADD game_outcome VARCHAR (255)" % (table_name, year))
+            db.cursor.execute("UPDATE %s_%s SET game_outcome = CASE "
+                              "WHEN (home_goals > visitor_goals) THEN 'W' "
+                              "WHEN (home_goals < visitor_goals) THEN 'L' "
+                              "WHEN (home_goals = '' OR visitor_goals = '' OR home_goals = visitor_goals) THEN '' "
+                              "END" % (table_name, year))
             db.cursor.execute("ALTER TABLE %s_%s ADD playoff_game INT" % (table_name, year))
             db.cursor.execute("UPDATE %s_%s SET playoff_game = IF(date_game >= '%s', 1, 0)"
                               % (table_name, year, playoff_start_date))
