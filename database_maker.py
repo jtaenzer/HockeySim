@@ -74,6 +74,15 @@ class DatabaseMakerMySQL:
         except mysql.connector.errors.ProgrammingError as err:
             print(err)
 
+    # Delete data from a table
+    def table_delete(self, table_name, conditions=""):
+        if conditions:
+            conditions = "WHERE " + conditions
+        try:
+            self.cursor.execute("DELETE FROM {0} {1}".format(table_name, conditions))
+        except mysql.connector.errors.ProgrammingError as err:
+            print(err)
+
     # Drop a table
     def table_drop(self, table_name):
         try:
