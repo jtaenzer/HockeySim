@@ -89,6 +89,7 @@ def main():
                 elif division in dbcfg.western_conf:
                     db.cursor.execute("UPDATE nhl_structure_%s SET conference = '%s' WHERE long_name = '%s'"
                                       % (year, "western", long_name))
+        db.db.commit()  # Not sure why this is necessary in this particular case
 
     if dbcfg.remake_schedule_tables:
         table_name = "nhl_schedule"
