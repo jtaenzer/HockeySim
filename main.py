@@ -1,41 +1,47 @@
-from __future__ import division
+import sys
+import getopt
 
+from database_maker import DatabaseMakerMySQL
 from simulation import Simulation
-#from visualize import Visualize
-
-##############################
-
-# Read teams from file
 
 
-sims          = 1
-iterations    = 1000
-teams_file    = "./teams/NHL_2018-2019.txt"
-schedule_file = "./schedules/NHL_2018-2019.csv"
-season_start  = 50
+def print_help():
+    print("help")
 
 
-doPlotting = False # should be false by default since it requires ROOT to be installed
-rootfile   = "test.root"
-treename   = "tree"
+def main():
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], "hl:u:p:d:", ["help", "host=", "user=", "passwd=", "database="])
+    except getopt.GetoptError:
+        help()
+        sys.exit(2)
+    host = None
+    user = None
+    passwd = None
+    database_name = None
+    for opt, arg in opts:
+        if opt in ("-h", "--help"):
+            print_help()
+            sys.exit()
+        elif opt in ("-l", "--host"):
+            host = arg
+        elif opt in ("-u", "--user"):
+            user = arg
+        elif opt in ("-p", "--passwd"):
+            passwd = arg
+        elif opt in ("-d", "--database"):
+            database_name = arg
 
-sim = Simulation(iterations, "NHL", teams_file, schedule_file, season_start)
-plotter = None
+    if None not in (host, user, passwd, database_name):
+        pass
+    else:
+        print_help()
+        sys.exit(2)
 
-team_names = []
-for team in sim.teams:
-    team_names.append(team.name)
-
-if doPlotting:
-    plotter = Visualize(rootfile, treename, sim.result)  # pass sim.result so we can assess what to save in the TTree
-    plotter.set_weight(100/iterations)  # not even sure why I'm using a setter here
-
-for i in range(sims):
+    db = DatabaseMakerMySQL(host, user, passwd, database_name)
+    sim = Simulation(1, db, "nhl", 2020, "auto")
     sim.run_simulation()
-#    if doPlotting:
-#        plotter.fill_TTree(i, sim.result)
-    sim.clear_sim_result()
 
-#if doPlotting:
-#    plotter.write_TFile()
-#    plotter.draw_TGraphs()
+
+if __name__ == "__main__":
+    main()
