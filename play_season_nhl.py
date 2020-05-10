@@ -71,8 +71,10 @@ class PlaySeasonNHL(PlaySeason):
         db.cursor.execute("DESCRIBE {0}".format(result_table))
         cols = [col[0] for col in db.cursor.fetchall()]
         for team in teams:
-            sql_str = "INSERT INTO %s (%s) VALUES (%s)" % (result_table, ", ".join(cols), "'{0}',".format(team) + ", ".join("0"*(len(cols)-1)))
-            db.cursor.execute(sql_str)
+            db.cursor.execute("INSERT INTO {0} ({1}) VALUES ({2})"
+                              .format(result_table,
+                                      ", ".join(cols),
+                                      "'{0}',".format(team) + ", ".join("0"*(len(cols)-1))))
 
     @staticmethod
     def generate_standings_from_game_record(teams, result_table, db, game_record, end=0):
@@ -96,3 +98,60 @@ class PlaySeasonNHL(PlaySeason):
                               "WHERE team_name='{2}'".format(result_table, points_row, winner))
             db.cursor.execute("UPDATE {0} SET losses=losses-{1}+1, OTlosses=OTlosses+{1}, points=points+{1} "
                               "WHERE team_name='{2}'".format(result_table, ot_loss, loser))
+
+    @staticmethod
+    def print_result_wildcard():
+        return
+
+    @staticmethod
+    def print_result_division(db, result_name, structure_name):
+        db.cursor.execute("DESCRIBE {0}".format(result_name))
+        cols = [col[0] for col in db.cursor.fetchall()]
+        cols_str = "{:<25}".format(cols[0]) + " " + "".join(["{:<10}".format(col.replace("points_ROW", "ROW")) for col in cols[1:]])
+        db.cursor.execute("SELECT DISTINCT division FROM {0}".format(structure_name))
+        divisions = [div[0].upper() for div in db.cursor.fetchall()]
+        for div in divisions:
+            print("\n{0}\n".format(div))
+            print(cols_str)
+            print("---------------------------------------------------------------------------------------------------")
+            db.cursor.execute("SELECT DISTINCT res.* FROM {0} res INNER JOIN {1} struct "
+                              "ON res.team_name = struct.long_name AND struct.division = '{2}' "
+                              "ORDER BY res.points DESC, res.points_ROW DESC"
+                              .format(result_name, structure_name, div))
+            for row in db.cursor.fetchall():
+                print("{:<25}".format(row[0]) + " " + "".join(["{:<10}".format(str(val)) for val in row[1:-1]]))
+        print()
+
+    @staticmethod
+    def print_result_conference(db, result_name, structure_name):
+        db.cursor.execute("DESCRIBE {0}".format(result_name))
+        cols = [col[0] for col in db.cursor.fetchall()]
+        cols_str = "{:<25}".format(cols[0]) + " " + "".join(["{:<10}".format(col.replace("points_ROW", "ROW")) for col in cols[1:]])
+        db.cursor.execute("SELECT DISTINCT conference FROM {0}".format(structure_name))
+        conferences = [conf[0].upper() for conf in db.cursor.fetchall()]
+
+        for conf in conferences:
+            print("\n{0}\n".format(conf))
+            print(cols_str)
+            print("---------------------------------------------------------------------------------------------------")
+            db.cursor.execute("SELECT DISTINCT res.* FROM {0} res INNER JOIN {1} struct "
+                              "ON res.team_name = struct.long_name AND struct.conference = '{2}' "
+                              "ORDER BY res.points DESC, res.points_ROW DESC"
+                              .format(result_name, structure_name, conf))
+            for row in db.cursor.fetchall():
+                print("{:<25}".format(row[0]) + " " + "".join(["{:<10}".format(str(val)) for val in row[1:-1]]))
+        print()
+
+    @staticmethod
+    def print_result_league(db, result_name):
+        print("\nNHL\n")
+        db.cursor.execute("DESCRIBE {0}".format(result_name))
+        cols = [col[0] for col in db.cursor.fetchall()]
+        print("{:<25}".format(cols[0]) + " "
+              + "".join(["{:<10}".format(col.replace("points_ROW", "ROW")) for col in cols[1:]]))
+        print("-------------------------------------------------------------------------------------------------------")
+        db.cursor.execute("SELECT team_name, wins, losses, OTlosses, points, points_ROW FROM {0} "
+                          "ORDER BY points DESC, points_ROW DESC".format(result_name))
+        for row in db.cursor.fetchall():
+            print("{:<25}".format(row[0]) + " " + "".join(["{:<10}".format(str(val)) for val in row[1:]]))
+        print()
