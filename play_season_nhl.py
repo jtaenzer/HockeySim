@@ -14,7 +14,7 @@ class PlaySeasonNHL(PlaySeason):
     def get_weight(self):
         return 50
 
-    # Determine which teams made the playoffs based on the NHL wildcard format
+    # Determine which teams made the playoffs based on the NHL wildcard format -- valid for 2014 onwards
     # Tie-breaking based on points, ROW are implemented
     # Tie-breaking based on head-to-head record, goal differential is not implemented, requires more thought
     def determine_playoffs(self, db, structure_name, season_name):
@@ -99,15 +99,57 @@ class PlaySeasonNHL(PlaySeason):
             db.cursor.execute("UPDATE {0} SET losses=losses-{1}+1, OTlosses=OTlosses+{1}, points=points+{1} "
                               "WHERE team_name='{2}'".format(result_table, ot_loss, loser))
 
-    @staticmethod
-    def print_result_wildcard():
-        return
+    # Can't be static because we need to know the div and wc cutoffs
+    def print_result_wildcard(self, db, result_name, structure_name):
+        db.cursor.execute("DESCRIBE {0}".format(result_name))
+        cols = [col[0] for col in db.cursor.fetchall()]
+        cols_str = "{:<25}".format(cols[0]) + " " \
+                   + "".join(["{:<10}".format(col.replace("points_ROW", "ROW")) for col in cols[1:]])
+        db.cursor.execute("SELECT DISTINCT conference FROM {0}".format(structure_name))
+        conferences = [conf[0].upper() for conf in db.cursor.fetchall()]
+
+        for conf in conferences:
+            print("\n{0}\n".format(conf.upper()))
+            print(cols_str)
+            db.cursor.execute("SELECT DISTINCT division FROM {0} WHERE conference = '{1}'"
+                              .format(structure_name, conf))
+            divisions = [div[0].upper() for div in db.cursor.fetchall()]
+            conf_playoff_teams = []
+            for div in divisions:
+                db.cursor.execute("SELECT DISTINCT res.team_name FROM {0} res INNER JOIN {1} struct "
+                                  "ON res.team_name = struct.long_name AND struct.division = '{2}' "
+                                  "AND struct.conference = '{3}' ORDER BY res.points DESC, res.points_ROW DESC "
+                                  "LIMIT {4}".format(result_name, structure_name, div, conf, self.div_cutoff))
+                div_playoff_teams = [team[0] for team in db.cursor.fetchall()]
+                conf_playoff_teams.extend(div_playoff_teams)
+                db.cursor.execute("SELECT * FROM {0} WHERE team_name IN ('{1}') ORDER BY points DESC, points_ROW DESC"
+                                  .format(result_name, "', '".join(div_playoff_teams)))
+                print("-----------------------------------------------------------------------------------------------")
+                print("{0}".format(div.upper()))
+                print("-----------------------------------------------------------------------------------------------")
+                for row in db.cursor.fetchall():
+                    print("{:<25}".format(row[0]) + " " + "".join(["{:<10}".format(str(val)) for val in row[1:]]))
+            db.cursor.execute("SELECT DISTINCT res.team_name FROM {0} res INNER JOIN {1} struct "
+                              "ON res.team_name = struct.long_name AND struct.conference = '{3}' "
+                              "ORDER BY res.points DESC, res.points_ROW DESC "
+                              .format(result_name, structure_name, div, conf, self.div_cutoff))
+            conf_teams = [team[0] for team in db.cursor.fetchall()]
+            db.cursor.execute("SELECT * FROM {0} WHERE team_name in ('{1}') and team_name NOT in ('{2}') "
+                              "ORDER BY points DESC, points_ROW DESC"
+                              .format(result_name, "', '".join(conf_teams), "', '".join(conf_playoff_teams)))
+            print("-----------------------------------------------------------------------------------------------")
+            print("WILDCARD")
+            print("-----------------------------------------------------------------------------------------------")
+            for row in db.cursor.fetchall():
+                print("{:<25}".format(row[0]) + " " + "".join(["{:<10}".format(str(val)) for val in row[1:]]))
+        print()
 
     @staticmethod
     def print_result_division(db, result_name, structure_name):
         db.cursor.execute("DESCRIBE {0}".format(result_name))
         cols = [col[0] for col in db.cursor.fetchall()]
-        cols_str = "{:<25}".format(cols[0]) + " " + "".join(["{:<10}".format(col.replace("points_ROW", "ROW")) for col in cols[1:]])
+        cols_str = "{:<25}".format(cols[0]) + " " \
+                   + "".join(["{:<10}".format(col.replace("points_ROW", "ROW")) for col in cols[1:]])
         db.cursor.execute("SELECT DISTINCT division FROM {0}".format(structure_name))
         divisions = [div[0].upper() for div in db.cursor.fetchall()]
         for div in divisions:
@@ -119,14 +161,15 @@ class PlaySeasonNHL(PlaySeason):
                               "ORDER BY res.points DESC, res.points_ROW DESC"
                               .format(result_name, structure_name, div))
             for row in db.cursor.fetchall():
-                print("{:<25}".format(row[0]) + " " + "".join(["{:<10}".format(str(val)) for val in row[1:-1]]))
+                print("{:<25}".format(row[0]) + " " + "".join(["{:<10}".format(str(val)) for val in row[1:]]))
         print()
 
     @staticmethod
     def print_result_conference(db, result_name, structure_name):
         db.cursor.execute("DESCRIBE {0}".format(result_name))
         cols = [col[0] for col in db.cursor.fetchall()]
-        cols_str = "{:<25}".format(cols[0]) + " " + "".join(["{:<10}".format(col.replace("points_ROW", "ROW")) for col in cols[1:]])
+        cols_str = "{:<25}".format(cols[0]) + " " \
+                   + "".join(["{:<10}".format(col.replace("points_ROW", "ROW")) for col in cols[1:]])
         db.cursor.execute("SELECT DISTINCT conference FROM {0}".format(structure_name))
         conferences = [conf[0].upper() for conf in db.cursor.fetchall()]
 
@@ -139,7 +182,7 @@ class PlaySeasonNHL(PlaySeason):
                               "ORDER BY res.points DESC, res.points_ROW DESC"
                               .format(result_name, structure_name, conf))
             for row in db.cursor.fetchall():
-                print("{:<25}".format(row[0]) + " " + "".join(["{:<10}".format(str(val)) for val in row[1:-1]]))
+                print("{:<25}".format(row[0]) + " " + "".join(["{:<10}".format(str(val)) for val in row[1:]]))
         print()
 
     @staticmethod
@@ -150,8 +193,7 @@ class PlaySeasonNHL(PlaySeason):
         print("{:<25}".format(cols[0]) + " "
               + "".join(["{:<10}".format(col.replace("points_ROW", "ROW")) for col in cols[1:]]))
         print("-------------------------------------------------------------------------------------------------------")
-        db.cursor.execute("SELECT team_name, wins, losses, OTlosses, points, points_ROW FROM {0} "
-                          "ORDER BY points DESC, points_ROW DESC".format(result_name))
+        db.cursor.execute("SELECT * FROM {0} ORDER BY points DESC, points_ROW DESC".format(result_name))
         for row in db.cursor.fetchall():
             print("{:<25}".format(row[0]) + " " + "".join(["{:<10}".format(str(val)) for val in row[1:]]))
         print()
