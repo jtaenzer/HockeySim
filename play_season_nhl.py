@@ -100,7 +100,7 @@ class PlaySeasonNHL(PlaySeason):
                               "WHERE team_name='{2}'".format(result_table, ot_loss, loser))
 
     # Can't be static because we need to know the div and wc cutoffs
-    def print_result_wildcard(self, db, result_name, structure_name):
+    def print_result_wildcard(self, db, result_name, structure_name, niter=1):
         db.cursor.execute("DESCRIBE {0}".format(result_name))
         cols = [col[0] for col in db.cursor.fetchall()]
         cols_str = "{:<25}".format(cols[0]) + " " \
@@ -128,7 +128,7 @@ class PlaySeasonNHL(PlaySeason):
                 print("{0}".format(div.upper()))
                 print("-----------------------------------------------------------------------------------------------")
                 for row in db.cursor.fetchall():
-                    print("{:<25}".format(row[0]) + " " + "".join(["{:<10}".format(str(val)) for val in row[1:]]))
+                    print("{:<25}".format(row[0]) + " " + "".join(["{:<10}".format(str(float(val/niter))) for val in row[1:]]))
             db.cursor.execute("SELECT DISTINCT res.team_name FROM {0} res INNER JOIN {1} struct "
                               "ON res.team_name = struct.long_name AND struct.conference = '{3}' "
                               "ORDER BY res.points DESC, res.points_ROW DESC "
@@ -141,11 +141,11 @@ class PlaySeasonNHL(PlaySeason):
             print("WILDCARD")
             print("-----------------------------------------------------------------------------------------------")
             for row in db.cursor.fetchall():
-                print("{:<25}".format(row[0]) + " " + "".join(["{:<10}".format(str(val)) for val in row[1:]]))
+                print("{:<25}".format(row[0]) + " " + "".join(["{:<10}".format(str(float(val/niter))) for val in row[1:]]))
         print()
 
     @staticmethod
-    def print_result_division(db, result_name, structure_name):
+    def print_result_division(db, result_name, structure_name, niter=1):
         db.cursor.execute("DESCRIBE {0}".format(result_name))
         cols = [col[0] for col in db.cursor.fetchall()]
         cols_str = "{:<25}".format(cols[0]) + " " \
@@ -161,11 +161,11 @@ class PlaySeasonNHL(PlaySeason):
                               "ORDER BY res.points DESC, res.points_ROW DESC"
                               .format(result_name, structure_name, div))
             for row in db.cursor.fetchall():
-                print("{:<25}".format(row[0]) + " " + "".join(["{:<10}".format(str(val)) for val in row[1:]]))
+                print("{:<25}".format(row[0]) + " " + "".join(["{:<10}".format(str(float(val/niter))) for val in row[1:]]))
         print()
 
     @staticmethod
-    def print_result_conference(db, result_name, structure_name):
+    def print_result_conference(db, result_name, structure_name, niter=1):
         db.cursor.execute("DESCRIBE {0}".format(result_name))
         cols = [col[0] for col in db.cursor.fetchall()]
         cols_str = "{:<25}".format(cols[0]) + " " \
@@ -182,11 +182,11 @@ class PlaySeasonNHL(PlaySeason):
                               "ORDER BY res.points DESC, res.points_ROW DESC"
                               .format(result_name, structure_name, conf))
             for row in db.cursor.fetchall():
-                print("{:<25}".format(row[0]) + " " + "".join(["{:<10}".format(str(val)) for val in row[1:]]))
+                print("{:<25}".format(row[0]) + " " + "".join(["{:<10}".format(str(float(val/niter))) for val in row[1:]]))
         print()
 
     @staticmethod
-    def print_result_league(db, result_name):
+    def print_result_league(db, result_name, niter=1):
         print("\nNHL\n")
         db.cursor.execute("DESCRIBE {0}".format(result_name))
         cols = [col[0] for col in db.cursor.fetchall()]
@@ -195,5 +195,5 @@ class PlaySeasonNHL(PlaySeason):
         print("-------------------------------------------------------------------------------------------------------")
         db.cursor.execute("SELECT * FROM {0} ORDER BY points DESC, points_ROW DESC".format(result_name))
         for row in db.cursor.fetchall():
-            print("{:<25}".format(row[0]) + " " + "".join(["{:<10}".format(str(val)) for val in row[1:]]))
+            print("{:<25}".format(row[0]) + " " + "".join(["{:<10}".format(str(float(val/niter))) for val in row[1:]]))
         print()
