@@ -119,9 +119,11 @@ class Simulation:
         # Fill the nhl season results table using the existing game record (up to self.season_start_date)
         season.generate_standings_from_game_record(self.teams, self.season_name, self.db, game_record, start_index)
 
+        # Print initial standings -- make this optional somehow?
+        #season.print_result_wildcard(self.db, self.season_name, self.structure_name)
+
         print("Running simulation with %i iterations" % self.iterations)
 
-        """
         # set up progress bar
         toolbar_width = 100
         # Make sure the number of iterations is a multiple of 100
@@ -130,7 +132,6 @@ class Simulation:
         sys.stdout.write("Progress: [%s]" % (" " * toolbar_width))
         sys.stdout.flush()
         sys.stdout.write("\b" * (toolbar_width+1))  # return to start of line, after '['
-        """
 
         for i in range(self.iterations):
             season.play_games_simple()  # This will fill the season.game_record dataframe
@@ -141,11 +142,9 @@ class Simulation:
             # Add the contents of the season results table to the sim resuls table
             season.update_result(self.db, self.result_name, self.season_name)
 
-            """
             # Update the progress bar
             if i % (self.iterations/toolbar_width) == 0:
                 sys.stdout.write("-")
                 sys.stdout.flush()
-            """
 
-        self.db.table_rows("nhl_sim_result")
+        season.print_result_wildcard(self.db, self.result_name, self.structure_name, self.iterations)
