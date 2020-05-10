@@ -57,21 +57,6 @@ class PlaySeason:
     def overtime_check():
         return ""
 
-    # This method will depend on league specific information so it isn't implemented here in the base class
-    @staticmethod
-    def sort_standings_by_division(standings):
-        print("sort_standings_by_division should not be called from the base class.\n")
-
-    # This method will depend on league specific information so it isn't implemented here in the base class
-    @staticmethod
-    def print_standings_sorted(standings, output_format="league"):
-        print("print_standings_sorted should not be called from the base class.\n")
-
-    # Format of the standings may change from league to league so this is not implemented in the base class
-    @staticmethod
-    def print_standings_tuple(tup):
-        print("print_standings_sorted should not be called from the base class.\n")
-
     # Format of the standings may change from league to league so this is not implemented in the base class
     @staticmethod
     def generate_initial_standings(teams):
@@ -100,7 +85,7 @@ class PlaySeason:
         z.update(y)
         return z
 
-    # Utility function to swap elements in a tuple, used for tie breaking
+    # Utility function to swap elements in a tuple
     @staticmethod
     def swap_tuple_elements(tup, i, j):
         tmp = list(tup)
