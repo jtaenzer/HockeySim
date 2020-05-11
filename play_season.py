@@ -1,13 +1,11 @@
 import random
-import copy
 
 
 class PlaySeason:
 
-    def __init__(self, teams, schedule, start):
+    def __init__(self, teams, game_record, start):
         self.teams = teams
-        self.schedule = schedule
-        self.game_record = copy.deepcopy(self.schedule)
+        self.game_record = game_record
         self.standings = None # Has to be created in daughter classes
         self.start = start
 
@@ -18,48 +16,21 @@ class PlaySeason:
     #  Doing this in a simple way will be susceptible to fluctuations, how to avoid that? Cap the weight at some value?
     # -There should be a better way to do the entries to the standings dictionary...
     def play_games_simple(self, allow_ot=True):
-        for i in range(len(self.game_record)):
-            if i < self.start:
-                continue
-            sched_key = "game"+str(i)
-            game = [self.schedule[sched_key]["visitor"], self.schedule[sched_key]["home"]]
-            winner = random.choice(game)
-            ot = self.overtime_check() if allow_ot else ""
-            self.game_record[sched_key].update({"winner": winner})
-            self.game_record[sched_key].update({'OT': ot})
-            self.update_standings(game, winner, ot)
+        for index in range(self.start, len(self.game_record)):
+            self.game_record.loc[index, "game_outcome"] = random.choice(['W', 'L'])
+            self.game_record.loc[index, "overtimes"] = self.overtime_check()
 
     # Run through the schedule and decide each game with a weighted random choice
     # Teams with greater point % are more likely to win
     # This first attempt is likely to be unstable...
     def play_games_weighted(self, allow_ot=True):
-        for i in range(len(self.game_record)):
-            if i < self.start:
-                continue
-            sched_key = "game"+str(i)
-            game = [self.schedule[sched_key]["visitor"], self.schedule[sched_key]["home"]]
-            weight = self.get_weight(game)
-            winner = self.get_winner_weighted(game, weight)
-            ot = self.overtime_check() if allow_ot else ""
-            self.game_record[sched_key].update({"winner": winner})
-            self.game_record[sched_key].update({'OT': ot})
-            self.update_standings(game, winner, ot)
+        print("not implemented.")
 
     def get_weight(self, game):
         print("get_weights should not be called in the base class.\n")
 
     def get_winner_weighted(self, game, weight):
-        if weight < 0 or weight > 100:
-            print ("PlaySeasaon.get_winner_weighted : weight (%s) not between 0 and 100, returning a random choice"
-                   % str(weight))
-            return random.choice(game)
-        if len(game) != 2:
-            print ("PlaySeasaon.get_winner_weighted : input game has wrong length, returning a random choice")
-            return random.choice(game)
-
-        if random.randint(0, 100) < weight:
-            return game[0]
-        else: return game[1]
+        print("not implemented")
 
     # This method should contain league specific rules so it isn't implemented here in the base class
     def update_standings(self, game, winner, ot=""):
@@ -85,21 +56,6 @@ class PlaySeason:
     @staticmethod
     def overtime_check():
         return ""
-
-    # This method will depend on league specific information so it isn't implemented here in the base class
-    @staticmethod
-    def sort_standings_by_division(standings):
-        print("sort_standings_by_division should not be called from the base class.\n")
-
-    # This method will depend on league specific information so it isn't implemented here in the base class
-    @staticmethod
-    def print_standings_sorted(standings, output_format="league"):
-        print("print_standings_sorted should not be called from the base class.\n")
-
-    # Format of the standings may change from league to league so this is not implemented in the base class
-    @staticmethod
-    def print_standings_tuple(tup):
-        print("print_standings_sorted should not be called from the base class.\n")
 
     # Format of the standings may change from league to league so this is not implemented in the base class
     @staticmethod
@@ -129,7 +85,7 @@ class PlaySeason:
         z.update(y)
         return z
 
-    # Utility function to swap elements in a tuple, used for tie breaking
+    # Utility function to swap elements in a tuple
     @staticmethod
     def swap_tuple_elements(tup, i, j):
         tmp = list(tup)

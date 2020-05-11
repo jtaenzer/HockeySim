@@ -1,83 +1,126 @@
 from __future__ import division
-import time
 import sys
 import datetime
+import pandas
+import numpy
 
-from schedule_maker import ScheduleMaker
 from play_season_nhl import PlaySeasonNHL
-from team_info import TeamInfo
 
 
 class Simulation:
 
-    def __init__(self, iterations, league, teams_file_path, schedule_file_path, season_start="auto"):
+    def __init__(self, iterations, db, league, year, season_start="auto"):
 
         # Number of times to play the season
         self.iterations = iterations
 
-        # Set up the list of team_info class objects based on the text file provided
-        # No protection against bad input yet...
-        self.teams_path = teams_file_path
-        self.teams = self.read_teams_file(teams_file_path)
-
-        # Set result to None initially, if it is still None later the sim won't run
-        self.result = None
-
-        # For now the only supported league is "NHL" and it is only used to set Ngames
+        # MySQL database
+        self.db = db
+        # The year as a string
+        self.year = str(year)
+        # For now the only supported league is "nhl" and it is only used to set Ngames
         # Could be used for more in the future
         self.league = league
-        if self.league == "NHL":
+
+        if self.league == "nhl":
             self.season_obj = PlaySeasonNHL
             self.Ngames = 82
-            self.result = self.season_obj.prep_sim_result(self.teams)
         else:  # this if-else sequence basically does nothing for now
             print("%s is not supported as a league" % self.league)
-            print("Using default settings with league=\"NHL\", this may break the schedule maker")
+            print("Using default settings with league=\"nhl\", this may break the schedule maker")
+            self.league = "nhl"
             self.season_obj = PlaySeasonNHL
             self.Ngames = 82
-            self.result = self.season_obj.prep_sim_result(self.teams)
 
-        # Set up the schedule based on the text file provided
-        # No protection against bad input yet...
-        self.schedule_path = schedule_file_path
-        schedmaker = ScheduleMaker(self.league, self.teams, self.Ngames, self.schedule_path)
-        self.schedule = schedmaker.schedule
+        # The schedule will be stored in a sql table named with format league_schedule_year
+        self.schedule_name = league + "_schedule_" + self.year
+        # The league structure will be stored in a sql table named with format league_structure_year
+        self.structure_name = league + "_structure_" + self.year
+        # The results of each iteration will be stored in a sql table with format league_season_result_year
+        self.season_name = league + "_season_result_" + self.year
+        # The results of the simulation will be stored in a sql table with format league_sim_result
+        self.result_name = league + "_sim_result"
 
-        # Protection against bad season_start input
-        # Really not sure this belongs in this class, but its convenient for now
-        first_unplayed_game = schedmaker.find_first_unplayed_game(self.schedule)
-        if season_start != "auto":
-            # Check if season_start can be converted to a datetime
+        # Generate a list of teams from the structure table
+        self.db.cursor.execute("SELECT long_name FROM %s" % self.structure_name)
+        self.teams = [team[0] for team in self.db.cursor.fetchall()]
+
+        # This will "DELETE" the contents of the sim_result table and re-populate it with team names and 0s
+        self.season_obj.generate_initial_standings(self.teams, self.result_name, self.db)
+
+        self.season_start_date = ""
+        if season_start == "full":
+            # We're playing the full season, retrieve the date of the first game and assign to season_start_date
+            self.db.cursor.execute("SELECT date_game FROM %s ORDER BY date_game LIMIT 1" % self.schedule_name)
+            self.season_start_date = self.db.cursor.fetchone()[0]
+        elif season_start == "auto":
+            # Commented code below achieves the same result using JOINs and UNIONs
+            # No longer necessary now that game_outcome is stored in the schedule tables
+            """
+            # Get list of team names so we can access all of the relevant gamelog tables
+            self.db.cursor.execute("SELECT short_name FROM nhl_structure_%s" % year)
+            teams_list = [team for tup in self.db.cursor.fetchall() for team in tup]
+            sql_exec_str = ""
+            # Building a massive sql command to do the following:
+            # Inner join the schedule with a gamelog table keeping game (dates) where there is no outcome, i.e. unplayed
+            # Union all of these inner joins, ordered by date_game, to get earliest date where there are unplayed games
+            for index, team in enumerate(teams_list):
+                team = team.lower()
+                sql_exec_str += "SELECT DISTINCT sched.date_game FROM {0} sched INNER JOIN ".format(self.schedule_name)
+                sql_exec_str += "nhl_gamelog_{0} {0} ON sched.date_game = {0}.date_game AND {0}.game_outcome = '' ".format(team)
+                if index < len(teams_list)-1:
+                    sql_exec_str += "UNION "
+                else:
+                    sql_exec_str += "ORDER BY date_game"
+            self.db.cursor.execute(sql_exec_str)
+            """
+            self.db.cursor.execute("SELECT date_game FROM %s WHERE game_outcome = '' LIMIT 1" % self.schedule_name)
             try:
-                self.season_start_date = datetime.datetime.strptime(season_start, '%Y-%m-%d')
-                self.season_start = schedmaker.find_game_number_by_date(self.schedule, self.season_start_date)
-            except (TypeError, ValueError) as e:
-                # If it isn't a date, it might be an integer
-                try:
-                    self.season_start = int(season_start)
-                    self.season_start_date = schedmaker.find_game_date_by_number(self.schedule, self.season_start)
-                except ValueError:
-                    print("Couldn't convert season_start (%s) to a YYYY-MM-DD date or to an integer, defaulting to "
-                          "auto" % self.season_start)
-                    self.season_start = "auto"
-
-            if type(self.season_start) is int and first_unplayed_game < self.season_start:
-                print("The first unplayed game is before season_start, defaulting back to auto")
-                self.season_start = first_unplayed_game
-                self.season_start_date = schedmaker.find_game_date_by_number(self.schedule, self.season_start)
+                self.season_start_date = self.db.cursor.fetchone()[0]
+            # If there are no unplayed games we should get a TypeError (fetchone will return None)
+            # IndexError should only happen if fetchall is used but include it just in case
+            except (IndexError, TypeError):
+                print("Couldn't find an unplayed game in %s so season_start = \"auto\" cannot be used, exiting."
+                      % self.schedule_name)
+                sys.exit(2)
         else:
-            self.season_start = first_unplayed_game
-            self.season_start_date = schedmaker.find_game_date_by_number(self.schedule, self.season_start)
+            self.season_start_date = season_start
+            # Check that season_start is a date with the correct format
+            try:
+                datetime.datetime.strptime(self.season_start_date, '%Y-%m-%d')
+            # TypeError -> season_start isn't a string, ValueError -> season_start isn't a string with Y-m-d format
+            except (TypeError, ValueError) as err:
+                print(err)
+                print("season_start (%s) must be auto, full, or a date with format Y-m-d, exiting." % season_start)
+                sys.exit(2)
+            # Check that there are games in the schedule *after* season_start
+            # ***May also want to check that there are no unplayed games before season_start***
+            self.db.cursor.execute("SELECT COUNT(*) FROM %s WHERE date_game >= '%s'"
+                                   % (self.schedule_name, self.season_start_date))
+            if self.db.cursor.fetchone()[0] < 1:
+                print("Couldn't find any games in %s after season_start = %s, exiting."
+                      % (self.schedule_name, self.season_start_date))
+                sys.exit(2)
+
+            self.db.cursor.execute("SELECT COUNT(*) FROM %s WHERE date_game < '%s' AND game_outcome = ''"
+                                   % (self.schedule_name, self.season_start_date))
+            if self.db.cursor.fetchone()[0] > 0:
+                print("There are unplayed games in %s prior to %s, exiting."
+                      % (self.schedule_name, self.season_start_date))
+                sys.exit(2)
 
     def run_simulation(self):
-        if not self.schedule:
-            print("Schedule dictionary is empty, can't sim.")
-            return
+        # Extract the schedule as a pandas data frame
+        game_record = pandas.read_sql_query("SELECT * FROM %s ORDER BY date_game" % self.schedule_name, self.db.db)
+        # Determine the index of the first game to simulate using self.season_start_date
+        start_index = game_record.index[game_record['date_game'] == self.season_start_date].tolist()[0]
+        # Create a season object
+        season = PlaySeasonNHL(self.teams, game_record, start_index)
+        # Fill the nhl season results table using the existing game record (up to self.season_start_date)
+        season.generate_standings_from_game_record(self.teams, self.season_name, self.db, game_record, start_index)
 
-        print("Generating initial standings from date %s\n" % self.season_start_date.date())
-        # Here we use our season object to call some static methods from whichever class
-        standings = self.season_obj.generate_standings_from_game_record(self.teams, self.schedule, self.season_start)
-        self.season_obj.print_standings_sorted(self.teams, standings)
+        # Print initial standings -- make this optional somehow?
+        #season.print_result_wildcard(self.db, self.season_name, self.structure_name)
 
         print("Running simulation with %i iterations" % self.iterations)
 
@@ -88,113 +131,20 @@ class Simulation:
             self.iterations -= self.iterations % toolbar_width
         sys.stdout.write("Progress: [%s]" % (" " * toolbar_width))
         sys.stdout.flush()
-        sys.stdout.write("\b" * (toolbar_width+1)) # return to start of line, after '['
+        sys.stdout.write("\b" * (toolbar_width+1))  # return to start of line, after '['
 
         for i in range(self.iterations):
-
-            season = None
-            if self.league == "NHL":
-                season = PlaySeasonNHL(self.teams, self.schedule, self.season_start)
-            if season and self.result:  # We need both of these to exist or things will break later
-                season.play_games_simple()
-                season.update_result(self.result)
-            else:
-                print("Couldn't determine what kind of season to play, aborting.")
-                break
+            season.play_games_simple()  # This will fill the season.game_record dataframe
+            # Re-make the season result table
+            season.generate_standings_from_game_record(self.teams, self.season_name, self.db, game_record)
+            # Fill the "playoffs" column in the season results table
+            season.determine_playoffs(self.db, self.structure_name, self.season_name)
+            # Add the contents of the season results table to the sim resuls table
+            season.update_result(self.db, self.result_name, self.season_name)
 
             # Update the progress bar
             if i % (self.iterations/toolbar_width) == 0:
                 sys.stdout.write("-")
                 sys.stdout.flush()
 
-        print("\nDone, printing result")
-        self.print_sim_result_sorted()
-
-    # Reset the result
-    def clear_sim_result(self):
-        self.result = self.season_obj.prep_sim_result(self.teams)
-
-    # Will replace print_sim_result
-    # Should print every quantity in result in a nicely formatted way
-    # Potentially needs to be moved into play_season_* if it is to be organized according to league structure
-    def print_sim_result(self):
-        # This shouldn't be hardcoded, figure out how to fix it later
-        var_order = ["playoffs", "points", "ROW", "wins", "losses", "OTlosses"]
-
-        head_str = '{:<25}'.format('Team')
-        head_str += '{:<20}'.format('Avg Playoff %')
-        head_str += '{:<15}'.format('Avg Points')
-        head_str += '{:<15}'.format('Avg ROW')
-        head_str += '{:<15}'.format('Avg Wins')
-        head_str += '{:<15}'.format('Avg Losses')
-        head_str += '{:<15}'.format('Avg OT Losses')
-        print("")
-        print(head_str)
-
-        for team in self.result:
-            team_str = '{:<25}'.format(team)
-            for var_key in var_order:
-                quantity = self.result[team][var_key] / self.iterations
-                if var_key == "playoffs":
-                    quantity = 100*quantity
-                    team_str += '{:<20}'.format(str(quantity)+"%")
-                else:
-                    team_str += '{:<15}'.format(str(quantity))
-            print(team_str)
-
-    def print_sim_result_sorted(self):
-        # This shouldn't be hardcoded, figure out how to fix it later
-        var_order = ["playoffs", "points", "ROW", "wins", "losses", "OTlosses"]
-
-        head_str = '{:<25}'.format('Team')
-        head_str += '{:<20}'.format('Avg Playoff %')
-        head_str += '{:<15}'.format('Avg Points')
-        head_str += '{:<15}'.format('Avg ROW')
-        head_str += '{:<15}'.format('Avg Wins')
-        head_str += '{:<15}'.format('Avg Losses')
-        head_str += '{:<15}'.format('Avg OT Losses')
-
-        atlantic, metro, central, pacific = self.season_obj.sort_standings_by_division(self.teams, self.result)
-        east = self.season_obj.merge_dicts(atlantic, metro)
-        west = self.season_obj.merge_dicts(central, pacific)
-        east_sorted = sorted(east.items(), key=lambda kv: kv[1]["playoffs"], reverse=True)
-        west_sorted = sorted(west.items(), key=lambda kv: kv[1]["playoffs"], reverse=True)
-
-        print("\nEAST\n")
-        print(head_str)
-        print("-------------------------------------------------------------------------------------------------------")
-        for i in range(len(east_sorted)):
-            team_str = '{:<25}'.format(east_sorted[i][0])
-            for var_key in var_order:
-                quantity = east_sorted[i][1][var_key]/self.iterations
-                if var_key == "playoffs":
-                    quantity = 100*quantity
-                    team_str += '{:<20}'.format(str(quantity)+"%")
-                else:
-                    team_str += '{:<15}'.format(str(quantity))
-            print(team_str)
-
-        print("\nWEST\n")
-        print(head_str)
-        print("-------------------------------------------------------------------------------------------------------")
-        for i in range(len(west_sorted)):
-            team_str = '{:<25}'.format(west_sorted[i][0])
-            for var_key in var_order:
-                quantity = west_sorted[i][1][var_key] / self.iterations
-                if var_key == "playoffs":
-                    quantity = 100 * quantity
-                    team_str += '{:<20}'.format(str(quantity) + "%")
-                else:
-                    team_str += '{:<15}'.format(str(quantity))
-            print(team_str)
-
-    @staticmethod
-    def read_teams_file(path):
-        teams = []
-        teams_file = open(path, 'r')
-        for line in teams_file:
-            name = line.split(',')[0]
-            div = line.split(',')[1].replace('\n', '')
-            team = TeamInfo(name, div)
-            teams.append(team)
-        return teams
+        season.print_result_wildcard(self.db, self.result_name, self.structure_name, self.iterations)
