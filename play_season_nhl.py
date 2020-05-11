@@ -5,179 +5,52 @@ import random
 
 class PlaySeasonNHL(PlaySeason):
 
-    def __init__(self, teams, schedule, start):
-        PlaySeason.__init__(self, teams, schedule, start)
-        self.standings = self.generate_standings_from_game_record(self.teams, self.game_record, self.start)
+    def __init__(self, teams, game_record, start):
+        PlaySeason.__init__(self, teams, game_record, start)
         self.div_cutoff = 3  # Number of teams from each division that make the playoffs
         self.wc_cutoff = 2  # Number of teams from each conference that make the playoffs as wildcards
 
-    # This doesn't really return a weight...
-    # Calculates the point % of both teams, normalizes the sum to 1 and returns the mid point
-    # The end result is that the team with the greater point % will be more likely to win
-    def get_weight(self, game):
-        # Sanity check, game should always be a list of two teams
-        if len(game) != 2:
-            print("PlaySeasonNHL.get_weight : len(game) != 2, returning coin flip")
-            return 50
+    # Returns "50" i.e. a coin flip for now
+    def get_weight(self):
+        return 50
 
-        point_percent = []
-        sum = 0
-        for team in game:
-            points = self.standings[team]["points"]
-            games_played = self.standings[team]["wins"] + self.standings[team]["losses"] + \
-                           self.standings[team]["OTlosses"]
-            # Return a coin flip if one of the teams hasn't no points or games played
-            if points == 0 or games_played == 0:
-                return 50
-            point_percent.append(points/games_played)
-            sum+=point_percent[-1]
+    # Determine which teams made the playoffs based on the NHL wildcard format -- valid for 2014 onwards
+    # Tie-breaking based on points, ROW are implemented
+    # Tie-breaking based on head-to-head record, goal differential is not implemented, requires more thought
+    def determine_playoffs(self, db, structure_name, season_name):
+        db.cursor.execute("SELECT DISTINCT division FROM {0}".format(structure_name))
+        divisions = [div[0] for div in db.cursor.fetchall()]
+        db.cursor.execute("SELECT DISTINCT conference FROM {0}".format(structure_name))
+        conferences = [conf[0] for conf in db.cursor.fetchall()]
 
-        weight = 1 - point_percent[0] / sum
-        if weight < 0 or weight > 1:
-            print("PlaySeasonNHL.get_weight : weight (%s) is less than 0 or greater than 1, returning coin flip"
-                  % str(weight))
-            return 50
+        # Can the two separate SQL queries in this loop be combined into one?
+        for div in divisions:
+            db.cursor.execute("SELECT DISTINCT seas.team_name FROM {0} seas INNER JOIN {1} struct "
+                              "ON seas.team_name = struct.long_name AND struct.division = '{2}' "
+                              "ORDER BY seas.points DESC, seas.points_ROW DESC LIMIT {3}"
+                              .format(season_name, structure_name, div, self.div_cutoff))
+            playoff_teams = tuple(team[0] for team in db.cursor.fetchall())
+            db.cursor.execute("UPDATE {0} SET playoffs = 1 WHERE team_name IN ('{1}')"
+                              .format(season_name, "', '".join(playoff_teams)))
 
-        return 100*weight
+        # Can the two separate SQL queries in this loop be combined into one?
+        for conference in conferences:
+            db.cursor.execute("SELECT DISTINCT seas.team_name FROM {0} seas INNER JOIN {1} struct ON "
+                              "seas.team_name = struct.long_name AND struct.conference = '{2}' AND seas.playoffs = 0 "
+                              "ORDER BY seas.points DESC, seas.points_ROW DESC LIMIT {3}"
+                              .format(season_name, structure_name, conference, self.wc_cutoff))
+            playoff_teams = tuple(team[0] for team in db.cursor.fetchall())
+            db.cursor.execute("UPDATE {0} SET playoffs = 1 WHERE team_name IN ('{1}')"
+                              .format(season_name, "', '".join(playoff_teams)))
 
-    def update_standings(self, game, winner, ot=""):
-        # loop over teams in game and update standings accordingly
-        for team in game:
-            if team == winner:
-                self.standings[team]["wins"] += 1
-                ROW = 1 if ot != "SO" else 0 # SO wins don't get added to ROW
-                self.standings[team]["ROW"] += ROW
-                self.standings[team]["points"] += 2
-            else:
-                if ot: # ot is an empty string for games decided in regulation
-                    self.standings[team]["OTlosses"] += 1
-                    self.standings[team]["points"] += 1
-                else:
-                    self.standings[team]["losses"] += 1
-
-    # Fill the result dictionary with whatever information we want to save
-    # The format of result is determine elsewhere, could cause trouble later
-    def update_result(self, result):
-        playoff_teams = self.determine_playoffs()
-        for team in self.teams:
-            if team.name in playoff_teams:
-                result[team.name]["playoffs"] += 1
-            result[team.name]["wins"] += self.standings[team.name]["wins"]
-            result[team.name]["losses"] += self.standings[team.name]["losses"]
-            result[team.name]["ROW"] += self.standings[team.name]["ROW"]
-            result[team.name]["OTlosses"] += self.standings[team.name]["OTlosses"]
-            result[team.name]["points"] += self.standings[team.name]["points"]
-
-
-    # Determine which teams made the playoffs based on the NHL wildcard format
-    # Tie-breaking based on ROW and head to head records are implemented
-    # Tie-breaking based on goal differential is not implemented, requires more thought
-    # This method could be static if we passed the standings to it, should it be?
-    def determine_playoffs(self):
-        playoff_team_list = []
-        atlantic, metro, central, pacific = self.sort_standings_by_division(self.teams, self.standings)
-        east = self.merge_dicts(atlantic, metro)
-        west = self.merge_dicts(central, pacific)
-
-        atlantic_sorted = self.chk_tiebreaks(self.sort_by_points_row(atlantic))
-        metro_sorted = self.chk_tiebreaks(self.sort_by_points_row(metro))
-        central_sorted = self.chk_tiebreaks(self.sort_by_points_row(central))
-        pacific_sorted = self.chk_tiebreaks(self.sort_by_points_row(pacific))
-
-        # Find the top self.div_cutoff (3) teams in each division and add them to playoff_team_list
-        # Pop those same teams from east and west so we can use east and west to determine the wildcard spots
-        for i in range(self.div_cutoff):
-            playoff_team_list.append(atlantic_sorted[i][0])
-            playoff_team_list.append(metro_sorted[i][0])
-            playoff_team_list.append(central_sorted[i][0])
-            playoff_team_list.append(pacific_sorted[i][0])
-            east.pop(atlantic_sorted[i][0])
-            east.pop(metro_sorted[i][0])
-            west.pop(central_sorted[i][0])
-            west.pop(pacific_sorted[i][0])
-
-        east_sorted = self.chk_tiebreaks(self.sort_by_points_row(east))
-        west_sorted = self.chk_tiebreaks(self.sort_by_points_row(west))
-
-        for i in range(self.wc_cutoff):
-            playoff_team_list.append(east_sorted[i][0])
-            playoff_team_list.append(west_sorted[i][0])
-
-        return playoff_team_list
-
-    # This method checks for ties and re-orders the standings based on tie-breakers
-    # For now only the head-to-head record is checked
-    def chk_tiebreaks(self, standings_sorted):
-        checkedpairs = []
-        for i in range(len(standings_sorted)):
-            for j in range(len(standings_sorted)):
-                if i == j:
-                    continue
-                if [i, j] in checkedpairs or [j, i] in checkedpairs:
-                    continue
-                points_i = standings_sorted[i][1]["points"]
-                points_j = standings_sorted[j][1]["points"]
-                row_i = standings_sorted[i][1]["ROW"]
-                row_j = standings_sorted[j][1]["ROW"]
-                if points_i == points_j and row_i == row_j:
-                    team_i = standings_sorted[i][0]
-                    team_j = standings_sorted[j][0]
-                    if self.chk_head_to_head(team_i, team_j) == team_j:
-                        standings_sorted = self.swap_tuple_elements(standings_sorted, i, j)
-                checkedpairs.append([i, j])
-        return standings_sorted
-
-    # Check the head to head record for tie breaking
-    # Rules (per NHL.com):
-    # Team with that earned the most points in games between the two teams wins the tie-break
-    # When the teams played an odd number of games, points earned in the first game played in the city that had
-    # the extra game shall not be included.
-    # The last fallback if the teams are still tied is the team with the greater goal differential -- not clear what
-    # to do there, just return random for now
-    def chk_head_to_head(self, team1, team2):
-
-        # First for convenience find the head-to-head games in our self.game_record and put them in a smaller dictionary
-        head_to_head = dict()
-        for game in self.game_record:
-            if (self.game_record[game]["home"] == team1 or self.game_record[game]["visitor"] == team1) and \
-                    (self.game_record[game]["home"] == team2 or self.game_record[game]["visitor"] == team2):
-                head_to_head[game] = (self.game_record[game])
-
-        # For odd numbers of games, determine which team had more home games and
-        # "pop" their first home game from head_to_head
-        # This could probably be improved
-        if len(head_to_head) % 2 != 0:
-            count = {team1: 0, team2: 0}
-            head_to_head_sorted = sorted(head_to_head.items(), key=lambda kv: kv[1]['date'])
-            for i in range(len(head_to_head_sorted)):
-                count[head_to_head_sorted[i][1]["home"]] += 1
-            if count[team1] > count[team2]:
-                pop_team = team1
-            else:
-                pop_team = team2
-            for i in range(len(head_to_head_sorted)):
-                if count[head_to_head_sorted[i][1]["home"]] == pop_team:
-                    head_to_head.pop(head_to_head_sorted[i][0])
-
-        # Determine how many points each team earned in their games against each other
-        team1_pts = 0
-        team2_pts = 0
-        for game in head_to_head:
-            if self.game_record[game]["winner"] == team1:
-                team1_pts += 2
-                if self.game_record[game]["OT"] == "OT" or self.game_record[game]["OT"] == "SO":
-                    team2_pts += 1
-            elif self.game_record[game]["winner"] == team2:
-                team2_pts += 2
-                if self.game_record[game]["OT"] == "OT" or self.game_record[game]["OT"] == "SO":
-                    team1_pts += 1
-
-        if team1_pts > team2_pts:
-            return team1
-        elif team2_pts < team1_pts:
-            return team2
-        else:
-            return random.choice([team1, team2])  # If they're still tied, just return a random choice
+    # Update the sim result table in the database
+    @staticmethod
+    def update_result(db, sim_name, season_name):
+        db.cursor.execute("DESCRIBE {0}".format(sim_name))
+        cols = [col[0] for col in db.cursor.fetchall()]
+        set_str = ", ".join(["sim.{0} = sim.{0} + seas.{0}".format(col) for col in cols[1:]])
+        db.cursor.execute("UPDATE {0} sim, {1} seas SET {2} WHERE sim.team_name = seas.team_name"
+                          .format(sim_name, season_name, set_str))
 
     # Decide if a game went to overtime assuming 25% of games go to OT and 10% go to SO
     @staticmethod
@@ -192,203 +65,135 @@ class PlaySeasonNHL(PlaySeason):
         else:
             return ""
 
-    # Sort the standings by NHL divisions
-    # Used in determine_playoffs_simple()
     @staticmethod
-    def sort_standings_by_division(teams, standings):
-        atlantic = dict()
-        metro = dict()
-        central = dict()
-        pacific = dict()
-
+    def generate_initial_standings(teams, result_table, db):
+        db.table_delete(result_table)
+        db.cursor.execute("DESCRIBE {0}".format(result_table))
+        cols = [col[0] for col in db.cursor.fetchall()]
         for team in teams:
-            if team.division == 'a':
-                atlantic[team.name] = standings[team.name]
-            elif team.division == 'm':
-                metro[team.name] = standings[team.name]
-            elif team.division == 'c':
-                central[team.name] = standings[team.name]
-            elif team.division == 'p':
-                pacific[team.name] = standings[team.name]
+            db.cursor.execute("INSERT INTO {0} ({1}) VALUES ({2})"
+                              .format(result_table,
+                                      ", ".join(cols),
+                                      "'{0}',".format(team) + ", ".join("0"*(len(cols)-1))))
 
-        return atlantic, metro, central, pacific
-
-    # Prints the standings in a nicely formatted way
-    # Currently gets called to print initial standings when starting a sim mid-season
     @staticmethod
-    def print_standings_sorted(teams, standings, output_format="wildcard"):
+    def generate_standings_from_game_record(teams, result_table, db, game_record, end=0):
+        PlaySeasonNHL.generate_initial_standings(teams, result_table, db)
+        if not end:
+            end = len(game_record)
+        for i in range(end):
+            winner = game_record.home_team_name.iloc[i]
+            loser = game_record.visitor_team_name.iloc[i]
+            points_row = 1
+            ot_loss = 0
+            if game_record.game_outcome.iloc[i] == "L":
+                winner = game_record.visitor_team_name.iloc[i]
+                loser = game_record.home_team_name.iloc[i]
+            if game_record.overtimes.iloc[i] == 'OT':
+                ot_loss = 1
+            elif game_record.overtimes.iloc[i] == 'SO':
+                points_row = 0
+                ot_loss = 1
+            db.cursor.execute("UPDATE {0} SET wins=wins+1, points=points+2, points_ROW=points_ROW+{1} "
+                              "WHERE team_name='{2}'".format(result_table, points_row, winner))
+            db.cursor.execute("UPDATE {0} SET losses=losses-{1}+1, OTlosses=OTlosses+{1}, points=points+{1} "
+                              "WHERE team_name='{2}'".format(result_table, ot_loss, loser))
 
-        print('{:<25}'.format('Team'),
-              '{:<10}'.format('Wins'),
-              '{:<10}'.format('Losses'),
-              '{:<10}'.format('OT Losses'),
-              '{:<10}'.format('Points'),
-              '{:<10}'.format('ROW'))
+    # Can't be static because we need to know the div and wc cutoffs
+    def print_result_wildcard(self, db, result_name, structure_name, niter=1):
+        db.cursor.execute("DESCRIBE {0}".format(result_name))
+        cols = [col[0] for col in db.cursor.fetchall()]
+        cols_str = "{:<25}".format(cols[0]) + " " \
+                   + "".join(["{:<10}".format(col.replace("points_ROW", "ROW")) for col in cols[1:]])
+        db.cursor.execute("SELECT DISTINCT conference FROM {0}".format(structure_name))
+        conferences = [conf[0].upper() for conf in db.cursor.fetchall()]
 
-        if output_format == "league":
-            standings_sorted = PlaySeasonNHL.sort_by_points_row(standings)
-            PlaySeasonNHL.print_standings_tuple(standings_sorted)
-
-        elif output_format == "conference":
-            atlantic, metro, central, pacific = PlaySeasonNHL.sort_standings_by_division(teams, standings)
-            east = PlaySeasonNHL.merge_dicts(atlantic, metro)
-            west = PlaySeasonNHL.merge_dicts(central, pacific)
-            print("\nEAST\n")
-            PlaySeasonNHL.print_standings_tuple(PlaySeasonNHL.sort_by_points_row(east))
-            print("\nWEST\n")
-            PlaySeasonNHL.print_standings_tuple(PlaySeasonNHL.sort_by_points_row(west))
-
-        elif output_format == "division":
-            atlantic, metro, central, pacific = PlaySeasonNHL.sort_standings_by_division(teams, standings)
-            print("\nATLANTIC\n")
-            PlaySeasonNHL.print_standings_tuple(PlaySeasonNHL.sort_by_points_row(atlantic))
-            print("\nMETROPOLITAN\n")
-            PlaySeasonNHL.print_standings_tuple(PlaySeasonNHL.sort_by_points_row(metro))
-            print("\nCENTRAL\n")
-            PlaySeasonNHL.print_standings_tuple(PlaySeasonNHL.sort_by_points_row(central))
-            print("\nPACIFIC\n")
-            PlaySeasonNHL.print_standings_tuple(PlaySeasonNHL.sort_by_points_row(pacific))
-
-        elif output_format == "wildcard":
-
-            # These are also hard-coded elsew here... so maybe they shouldn't be!
-            div_cutoff = 3
-            wc_cutoff = 2
-
-            atlantic, metro, central, pacific = PlaySeasonNHL.sort_standings_by_division(teams, standings)
-            east = PlaySeasonNHL.merge_dicts(atlantic, metro)
-            west = PlaySeasonNHL.merge_dicts(central, pacific)
-
-            atlantic_sorted = PlaySeasonNHL.sort_by_points_row(atlantic)
-            metro_sorted = PlaySeasonNHL.sort_by_points_row(metro)
-            central_sorted = PlaySeasonNHL.sort_by_points_row(central)
-            pacific_sorted = PlaySeasonNHL.sort_by_points_row(pacific)
-
-            atlantic_top = dict()
-            metro_top = dict()
-            central_top = dict()
-            pacific_top = dict()
-            for i in range(div_cutoff):
-                atlantic_top[atlantic_sorted[i][0]] = atlantic_sorted[i][1]
-                metro_top[metro_sorted[i][0]] = metro_sorted[i][1]
-                east.pop(atlantic_sorted[i][0])
-                east.pop(metro_sorted[i][0])
-                central_top[central_sorted[i][0]] = central_sorted[i][1]
-                pacific_top[pacific_sorted[i][0]] = pacific_sorted[i][1]
-                west.pop(central_sorted[i][0])
-                west.pop(pacific_sorted[i][0])
-
-            east_sorted = PlaySeasonNHL.sort_by_points_row(east)
-            west_sorted = PlaySeasonNHL.sort_by_points_row(west)
-
-            east_wc = dict()
-            west_wc = dict()
-            for i in range(wc_cutoff):
-                east_wc[east_sorted[i][0]] = east_sorted[i][1]
-                east.pop(east_sorted[i][0])
-                west_wc[west_sorted[i][0]] = west_sorted[i][1]
-                west.pop(west_sorted[i][0])
-
-            print("\nEAST\n")
-            print("ATLANTIC")
-            print("------------------------------------------------------------------------")
-            PlaySeasonNHL.print_standings_tuple(PlaySeasonNHL.sort_by_points_row(atlantic_top))
-            print("------------------------------------------------------------------------")
-            print("METROPOLITAN")
-            print("------------------------------------------------------------------------")
-            PlaySeasonNHL.print_standings_tuple(PlaySeasonNHL.sort_by_points_row(metro_top))
-            print("------------------------------------------------------------------------")
+        for conf in conferences:
+            print("\n{0}\n".format(conf.upper()))
+            print(cols_str)
+            db.cursor.execute("SELECT DISTINCT division FROM {0} WHERE conference = '{1}'"
+                              .format(structure_name, conf))
+            divisions = [div[0].upper() for div in db.cursor.fetchall()]
+            conf_playoff_teams = []
+            for div in divisions:
+                db.cursor.execute("SELECT DISTINCT res.team_name FROM {0} res INNER JOIN {1} struct "
+                                  "ON res.team_name = struct.long_name AND struct.division = '{2}' "
+                                  "AND struct.conference = '{3}' ORDER BY res.points DESC, res.points_ROW DESC "
+                                  "LIMIT {4}".format(result_name, structure_name, div, conf, self.div_cutoff))
+                div_playoff_teams = [team[0] for team in db.cursor.fetchall()]
+                conf_playoff_teams.extend(div_playoff_teams)
+                db.cursor.execute("SELECT * FROM {0} WHERE team_name IN ('{1}') ORDER BY points DESC, points_ROW DESC"
+                                  .format(result_name, "', '".join(div_playoff_teams)))
+                print("-----------------------------------------------------------------------------------------------")
+                print("{0}".format(div.upper()))
+                print("-----------------------------------------------------------------------------------------------")
+                for row in db.cursor.fetchall():
+                    print("{:<25}".format(row[0]) + " " + "".join(["{:<10}".format(str(float(val/niter))) for val in row[1:]]))
+            db.cursor.execute("SELECT DISTINCT res.team_name FROM {0} res INNER JOIN {1} struct "
+                              "ON res.team_name = struct.long_name AND struct.conference = '{3}' "
+                              "ORDER BY res.points DESC, res.points_ROW DESC "
+                              .format(result_name, structure_name, div, conf, self.div_cutoff))
+            conf_teams = [team[0] for team in db.cursor.fetchall()]
+            db.cursor.execute("SELECT * FROM {0} WHERE team_name in ('{1}') and team_name NOT in ('{2}') "
+                              "ORDER BY points DESC, points_ROW DESC"
+                              .format(result_name, "', '".join(conf_teams), "', '".join(conf_playoff_teams)))
+            print("-----------------------------------------------------------------------------------------------")
             print("WILDCARD")
-            print("------------------------------------------------------------------------")
-            PlaySeasonNHL.print_standings_tuple(PlaySeasonNHL.sort_by_points_row(east_wc))
-            print("------------------------------------------------------------------------")
-            PlaySeasonNHL.print_standings_tuple(PlaySeasonNHL.sort_by_points_row(east))
-
-            print("\nWEST\n")
-            print("CENTRAL")
-            print("------------------------------------------------------------------------")
-            PlaySeasonNHL.print_standings_tuple(PlaySeasonNHL.sort_by_points_row(central_top))
-            print("------------------------------------------------------------------------")
-            print("PACIFIC")
-            print("------------------------------------------------------------------------")
-            PlaySeasonNHL.print_standings_tuple(PlaySeasonNHL.sort_by_points_row(pacific_top))
-            print("------------------------------------------------------------------------")
-            print("WILDCARD")
-            print("------------------------------------------------------------------------")
-            PlaySeasonNHL.print_standings_tuple(PlaySeasonNHL.sort_by_points_row(west_wc))
-            print("------------------------------------------------------------------------")
-            PlaySeasonNHL.print_standings_tuple(PlaySeasonNHL.sort_by_points_row(west))
-        print("\n")
+            print("-----------------------------------------------------------------------------------------------")
+            for row in db.cursor.fetchall():
+                print("{:<25}".format(row[0]) + " " + "".join(["{:<10}".format(str(float(val/niter))) for val in row[1:]]))
+        print()
 
     @staticmethod
-    def print_standings_tuple(standings_tup):
-        for team in range(len(standings_tup)):
-            print('{:<25}'.format(standings_tup[team][0]),
-                  '{:<10}'.format(standings_tup[team][1]["wins"]),
-                  '{:<10}'.format(standings_tup[team][1]["losses"]),
-                  '{:<10}'.format(standings_tup[team][1]["OTlosses"]),
-                  '{:<10}'.format(standings_tup[team][1]["points"]),
-                  '{:<10}'.format(standings_tup[team][1]["ROW"]))
+    def print_result_division(db, result_name, structure_name, niter=1):
+        db.cursor.execute("DESCRIBE {0}".format(result_name))
+        cols = [col[0] for col in db.cursor.fetchall()]
+        cols_str = "{:<25}".format(cols[0]) + " " \
+                   + "".join(["{:<10}".format(col.replace("points_ROW", "ROW")) for col in cols[1:]])
+        db.cursor.execute("SELECT DISTINCT division FROM {0}".format(structure_name))
+        divisions = [div[0].upper() for div in db.cursor.fetchall()]
+        for div in divisions:
+            print("\n{0}\n".format(div))
+            print(cols_str)
+            print("---------------------------------------------------------------------------------------------------")
+            db.cursor.execute("SELECT DISTINCT res.* FROM {0} res INNER JOIN {1} struct "
+                              "ON res.team_name = struct.long_name AND struct.division = '{2}' "
+                              "ORDER BY res.points DESC, res.points_ROW DESC"
+                              .format(result_name, structure_name, div))
+            for row in db.cursor.fetchall():
+                print("{:<25}".format(row[0]) + " " + "".join(["{:<10}".format(str(float(val/niter))) for val in row[1:]]))
+        print()
 
     @staticmethod
-    # Create a dictionary to hold wins, losses, OT losses for each team
-    def generate_initial_standings(teams):
-        standings = {}
-        for team in teams:
-            standings[team.name] = {"wins": 0, "losses": 0, "OTlosses": 0, "points": 0, "ROW": 0, "div": team.division}
-        return standings
+    def print_result_conference(db, result_name, structure_name, niter=1):
+        db.cursor.execute("DESCRIBE {0}".format(result_name))
+        cols = [col[0] for col in db.cursor.fetchall()]
+        cols_str = "{:<25}".format(cols[0]) + " " \
+                   + "".join(["{:<10}".format(col.replace("points_ROW", "ROW")) for col in cols[1:]])
+        db.cursor.execute("SELECT DISTINCT conference FROM {0}".format(structure_name))
+        conferences = [conf[0].upper() for conf in db.cursor.fetchall()]
+
+        for conf in conferences:
+            print("\n{0}\n".format(conf))
+            print(cols_str)
+            print("---------------------------------------------------------------------------------------------------")
+            db.cursor.execute("SELECT DISTINCT res.* FROM {0} res INNER JOIN {1} struct "
+                              "ON res.team_name = struct.long_name AND struct.conference = '{2}' "
+                              "ORDER BY res.points DESC, res.points_ROW DESC"
+                              .format(result_name, structure_name, conf))
+            for row in db.cursor.fetchall():
+                print("{:<25}".format(row[0]) + " " + "".join(["{:<10}".format(str(float(val/niter))) for val in row[1:]]))
+        print()
 
     @staticmethod
-    def generate_standings_from_game_record(teams, game_record, end=None):
-        standings = PlaySeasonNHL.generate_initial_standings(teams)
-
-        for i in range(len(game_record)):
-            game_key = "game"+str(i)
-            if end is not None and i >= end:
-                continue
-            elif not game_record[game_key]["winner"]:
-                continue
-            winner = game_record[game_key]["winner"]
-            if game_record[game_key]["visitor"] == winner:
-                loser = game_record[game_key]["home"]
-            else:
-                loser = game_record[game_key]["visitor"]
-            standings[winner]["wins"] += 1
-            standings[winner]["points"] += 2
-            # This bit isn't great, hard coding and probably not optimal
-            ot = game_record[game_key]["OT"]
-            if not ot:
-                standings[winner]["ROW"] += 1
-                standings[loser]["losses"] += 1
-            elif ot == "OT":
-                standings[winner]["ROW"] += 1
-                standings[loser]["points"] += 1
-                standings[loser]["OTlosses"] += 1
-            elif ot == "SO":
-                standings[loser]["points"] += 1
-                standings[loser]["OTlosses"] += 1
-        return standings
-
-    @staticmethod
-    # Utility function to sort by points and ROW, since we do this a lot
-    def sort_by_points_row(standings):
-        return sorted(standings.items(), key=lambda kv: (kv[1]['points'], kv[1]['ROW']), reverse=True)
-
-    # Create an empty dictionary to hold the simulated result
-    # For now the result is just the count of how many times each team makes the playoffs
-    # More information that could be be added:
-    # - avg wins/losses/pts
-    # -
-    # This method is in PlaySeason (and daughters) since the format of the result will depend on the league
-    @staticmethod
-    def prep_sim_result(teams):
-        result = dict()
-        for team in teams:
-            result[team.name] = dict()
-            result[team.name].update({"playoffs": 0})
-            result[team.name].update({"wins": 0})
-            result[team.name].update({"losses": 0})
-            result[team.name].update({"OTlosses": 0})
-            result[team.name].update({"points": 0})
-            result[team.name].update({"ROW": 0})
-        return result
+    def print_result_league(db, result_name, niter=1):
+        print("\nNHL\n")
+        db.cursor.execute("DESCRIBE {0}".format(result_name))
+        cols = [col[0] for col in db.cursor.fetchall()]
+        print("{:<25}".format(cols[0]) + " "
+              + "".join(["{:<10}".format(col.replace("points_ROW", "ROW")) for col in cols[1:]]))
+        print("-------------------------------------------------------------------------------------------------------")
+        db.cursor.execute("SELECT * FROM {0} ORDER BY points DESC, points_ROW DESC".format(result_name))
+        for row in db.cursor.fetchall():
+            print("{:<25}".format(row[0]) + " " + "".join(["{:<10}".format(str(float(val/niter))) for val in row[1:]]))
+        print()
