@@ -62,63 +62,65 @@ def main():
         print_help()
         sys.exit(2)
 
-    db = DatabaseMakerMySQL(host, user, passwd)
+    dbmaker = DatabaseMakerMySQL(host, user, passwd)
     if dbcfg.remake_db:
-        db.db_drop(database_name)
-        db.db_create(database_name)
-    db = DatabaseMakerMySQL(host, user, passwd, database_name)
+        dbmaker.db_drop(database_name)
+        dbmaker.db_create(database_name)
+    dbmaker = DatabaseMakerMySQL(host, user, passwd, database_name)
+    db = dbmaker.db
+    cursor = dbmaker.cursor
 
     if dbcfg.remake_league_structure_tables:
         table_name = "nhl_structure"
         structure_attrs = pd.DataFrame(dbcfg.structure_attrs, columns=['attr', 'tag', 'type'])
-        table_str = db.table_str_from_df(structure_attrs)
+        table_str = dbmaker.table_str_from_df(structure_attrs)
         for year in dbcfg.years:
             structure_url = "https://www.hockey-reference.com/leagues/NHL_%s.html" % year
-            db.table_drop(table_name + "_%s" % year)
-            db.table_create(table_name + "_%s" % year, table_str)
-            db.insert_league_structure_table(table_name + "_%s" % year, structure_attrs, dbcfg.teams_dict,
+            dbmaker.table_drop(table_name + "_%s" % year)
+            dbmaker.table_create(table_name + "_%s" % year, table_str)
+            dbmaker.insert_league_structure_table(table_name + "_%s" % year, structure_attrs, dbcfg.teams_dict,
                                              structure_url, tag="table",
                                              tag_attrs={"id": ["standings_EAS", "standings_WES"]})
-            db.cursor.execute("SELECT long_name, division FROM nhl_structure_%s" % year)
-            for row in db.cursor.fetchall():
+            cursor.execute("SELECT long_name, division FROM nhl_structure_%s" % year)
+            for row in cursor.fetchall():
                 long_name = row[0]
                 division = row[1]
                 if division in dbcfg.eastern_conf:
-                    db.cursor.execute("UPDATE nhl_structure_%s SET conference = '%s' WHERE long_name = '%s'"
+                    cursor.execute("UPDATE nhl_structure_%s SET conference = '%s' WHERE long_name = '%s'"
                                       % (year, "eastern", long_name))
                 elif division in dbcfg.western_conf:
-                    db.cursor.execute("UPDATE nhl_structure_%s SET conference = '%s' WHERE long_name = '%s'"
+                    cursor.execute("UPDATE nhl_structure_%s SET conference = '%s' WHERE long_name = '%s'"
                                       % (year, "western", long_name))
-        db.db.commit()  # Not sure why this is necessary in this particular case
+        db.commit()  # Not sure why this is necessary in this particular case
 
     if dbcfg.remake_schedule_tables:
         table_name = "nhl_schedule"
         schedule_attrs = pd.DataFrame(dbcfg.schedule_attrs, columns=['attr', 'tag', 'type'])
-        table_str = db.table_str_from_df(schedule_attrs)
+        table_str = dbmaker.table_str_from_df(schedule_attrs)
         schedule_urls = []
         for year in dbcfg.years:
             schedule_urls.append("https://www.hockey-reference.com/leagues/NHL_%s_games.html" % year)
-            db.table_drop(table_name + "_%s" % year)  # Probably needs protection against the table not existing
-            db.table_create(table_name + "_%s" % year, table_str)
-            db.insert_from_urls(table_name + "_%s" % year, schedule_attrs, [schedule_urls[-1]], tag="tr")
+            dbmaker.table_drop(table_name + "_%s" % year)  # Probably needs protection against the table not existing
+            dbmaker.table_create(table_name + "_%s" % year, table_str)
+            dbmaker.insert_from_urls(table_name + "_%s" % year, schedule_attrs, [schedule_urls[-1]], tag="tr")
             playoff_start_date = find_playoffs_start_date(schedule_urls[-1])
             if not playoff_start_date:
                 playoff_start_date = "2100-01-01"
-            db.cursor.execute("ALTER TABLE %s_%s ADD game_outcome VARCHAR (255)" % (table_name, year))
-            db.cursor.execute("UPDATE %s_%s SET game_outcome = CASE "
+            cursor.execute("ALTER TABLE %s_%s ADD game_outcome VARCHAR (255)" % (table_name, year))
+            cursor.execute("UPDATE %s_%s SET game_outcome = CASE "
                               "WHEN (home_goals > visitor_goals) THEN 'W' "
                               "WHEN (home_goals < visitor_goals) THEN 'L' "
                               "WHEN (home_goals = '' OR visitor_goals = '' OR home_goals = visitor_goals) THEN '' "
                               "END" % (table_name, year))
-            db.cursor.execute("ALTER TABLE %s_%s ADD playoff_game INT" % (table_name, year))
-            db.cursor.execute("UPDATE %s_%s SET playoff_game = IF(date_game >= '%s', 1, 0)"
+            cursor.execute("ALTER TABLE %s_%s ADD playoff_game INT" % (table_name, year))
+            cursor.execute("UPDATE %s_%s SET playoff_game = IF(date_game >= '%s', 1, 0)"
                               % (table_name, year, playoff_start_date))
-        db.table_drop(table_name)  # Probably needs protection against the table not existing
-        db.merge_tables(table_name, ["nhl_schedule_%s" % year for year in dbcfg.years], new=True)
+        dbmaker.table_drop(table_name)
+        dbmaker.merge_tables(table_name, ["nhl_schedule_%s" % year for year in dbcfg.years], new=True)
 
     if dbcfg.fill_gamelog_tables:
         gamelog_attrs = pd.DataFrame(dbcfg.gamelog_attrs, columns=['attr', 'tag', 'type'])
-        table_str = db.table_str_from_df(gamelog_attrs)
+        table_str = dbmaker.table_str_from_df(gamelog_attrs)
         for team in dbcfg.teams:
             table_name = "nhl_gamelog_%s" % team
             gamelog_urls = []
@@ -130,25 +132,25 @@ def main():
                     team_url = "ATL"
                 gamelog_urls.append("https://www.hockey-reference.com/teams/%s/%s_gamelog.html" % (team_url, year))
             if dbcfg.remake_gamelog_tables:
-                db.table_drop(table_name)
-                db.table_create(table_name, table_str)
-            db.insert_from_urls(table_name, gamelog_attrs, gamelog_urls, tag='tr',
+                dbmaker.table_drop(table_name)
+                dbmaker.table_create(table_name, table_str)
+            dbmaker.insert_from_urls(table_name, gamelog_attrs, gamelog_urls, tag='tr',
                                 tag_attrs={'id': [lambda x: x.startswith('tm_gamelog_')]})
 
     if dbcfg.remake_sim_result_table:
         sim_result_attrs = pd.DataFrame(dbcfg.sim_result_attrs, columns=['attr', 'tag', 'type'])
-        table_str = db.table_str_from_df(sim_result_attrs)
+        table_str = dbmaker.table_str_from_df(sim_result_attrs)
         table_name = "nhl_sim_result"
-        db.table_drop(table_name)
-        db.table_create(table_name, table_str)
+        dbmaker.table_drop(table_name)
+        dbmaker.table_create(table_name, table_str)
 
     if dbcfg.remake_season_result_tables:
         season_result_attrs = pd.DataFrame(dbcfg.sim_result_attrs, columns=['attr', 'tag', 'type'])
-        table_str = db.table_str_from_df(season_result_attrs)
+        table_str = dbmaker.table_str_from_df(season_result_attrs)
         for year in dbcfg.years:
             table_name = "nhl_season_result_%s" % year
-            db.table_drop(table_name)
-            db.table_create(table_name, table_str)
+            dbmaker.table_drop(table_name)
+            dbmaker.table_create(table_name, table_str)
 
 
 if __name__ == "__main__":
