@@ -11,7 +11,9 @@ class Plotter:
         if self.plot_dir[-1] == "/":
           self.plot_dir = self.plot_dir[:-1]
 
-    def correlation_plot(self, dataframe, variables):
+    def correlation_plot(self, dataframe, variables, name=""):
+        if not name:
+            name = "_".join(variables)
         corr = dataframe.corr()
         fig = plt.figure()
         ax = fig.add_subplot(111)
@@ -22,4 +24,5 @@ class Plotter:
         ax.set_yticks(ticks)
         ax.set_xticklabels(variables, rotation='vertical')
         ax.set_yticklabels(variables)
-        plt.savefig("{0}/corr.png".format(self.plot_dir))
+        plt.savefig("{0}/{1}_corr.png".format(self.plot_dir, name))
+        plt.close()
