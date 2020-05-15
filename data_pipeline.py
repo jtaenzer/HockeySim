@@ -34,6 +34,10 @@ class DataPipeline:
             away_data = pd.read_sql_query("SELECT {0} FROM {1} WHERE date_game < '{2}' "
                                           "ORDER BY date_game DESC LIMIT {3}"
                                           .format(variables_str, away_table, row["date_game"], str(step)), self.db)
+
+            if len(home_data) < 1 or len(away_data) < 1:
+                continue
+
             home_averages = []
             away_averages = []
             for var in variables:
