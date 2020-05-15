@@ -4,6 +4,7 @@ import requests
 import pandas as pd
 import dbconfig as dbcfg
 from database_maker import DatabaseMakerMySQL
+from data_pipeline import DataPipeline
 from bs4 import BeautifulSoup
 
 # Finds the date the playoffs started for a particular season
@@ -151,6 +152,16 @@ def main():
             table_name = "nhl_season_result_%s" % year
             dbmaker.table_drop(table_name)
             dbmaker.table_create(table_name, table_str)
+
+    if dbcfg.remake_game_avg_tables:
+        pipeline = DataPipeline(dbmaker)
+        steps = [2, 3, 4, 5, 6, 7, 8, 9, 10]  # Consider moving this into dbconfig?
+        # Collect all possible variables from the gamelog tables -- could make this configurable instead
+        cursor.execute("DESCRIBE nhl_gamelog_{0}".format(list(dbcfg.teams_dict.values())[0]))
+        # Drop non-numerical variables, we can get those from the schedule table if we need them later
+        variables = [var[0] for var in cursor.fetchall() if 'varchar' not in var[1] and 'date' not in var[1]]
+        for step in steps:
+            pipeline.create_average_game_data_table("nhl", dbcfg.teams_dict, variables, step)
 
 
 if __name__ == "__main__":
